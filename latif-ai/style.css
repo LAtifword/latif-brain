@@ -485,3 +485,44 @@ textarea, input { font-family: inherit; }
 #btnMic.active-like { color: var(--red); animation: micPulse 1.2s ease-in-out infinite; }
 @keyframes micPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
 #btnVoiceMode:active { background: var(--surface3); }
+
+/* ════════════════════════════════════════════════════════════════
+   OFFLINE CACHE UI (V3)
+   ════════════════════════════════════════════════════════════════ */
+.cache-status-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+}
+.status-card {
+  padding: 12px; border-radius: 8px; background: var(--surface2);
+  text-align: center;
+}
+.status-value { display: block; font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.status-label { display: block; font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.button-group { display: flex; gap: 8px; }
+.button-group .field-btn { flex: 1; }
+
+.stat-row {
+  display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--surface3);
+  font-size: 14px;
+}
+.stat-name { color: var(--text-dim); }
+.stat-value { color: var(--text); font-weight: 500; }
+
+.cache-entry-list { max-height: 300px; overflow-y: auto; }
+.cache-empty {
+  padding: 24px; text-align: center; color: var(--text-dim); font-size: 14px;
+}
+.cache-entry {
+  padding: 12px; background: var(--surface2); border-radius: 6px; margin-bottom: 8px;
+  font-size: 13px;
+}
+.entry-model {
+  font-weight: 600; color: var(--text); margin-bottom: 4px;
+}
+.entry-query {
+  color: var(--text-dim); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.entry-date {
+  color: var(--text-dim); font-size: 12px;
+}

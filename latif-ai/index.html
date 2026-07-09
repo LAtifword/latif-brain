@@ -410,11 +410,66 @@
       <button class="field-btn danger" id="btnWipeData">Clear All Conversations</button>
     </div>
 
+    <div class="field-group">
+      <label class="field-label">Offline Cache</label>
+      <div class="cache-status-cards">
+        <div class="status-card">
+          <div class="status-value" id="cacheSizeDisplay">—</div>
+          <div class="status-label">Cache Size</div>
+        </div>
+        <div class="status-card">
+          <div class="status-value" id="cacheCountDisplay">0</div>
+          <div class="status-label">Responses</div>
+        </div>
+      </div>
+      <div class="field-hint">The app automatically caches chat responses when Ollama is available. If the server goes offline, you can search cached responses.</div>
+    </div>
+
+    <div class="field-group">
+      <div class="button-group">
+        <button class="field-btn" id="btnViewCacheStats">View Details</button>
+        <button class="field-btn danger" id="btnClearCache">Clear Cache</button>
+      </div>
+    </div>
+
     <div class="about-block">
       <div class="about-logo">⟡</div>
       <div class="about-name">LATIF AI</div>
       <div class="about-sub">لطيف للذكاء الاصطناعي · LATIF GX V3</div>
       <div class="about-sub2">100% on-device inference via Ollama · Zero cloud dependency</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ CACHE STATISTICS MODAL (V3) ════════════ -->
+<div class="modal-backdrop" id="cacheStatsBackdrop"></div>
+<div class="modal" id="cacheStatsModal">
+  <div class="modal-head">
+    <div class="modal-title">Cache Statistics</div>
+    <button class="icon-btn" id="btnCloseCacheStats">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="field-group">
+      <div class="stat-row">
+        <span class="stat-name">Total Size:</span>
+        <span class="stat-value" id="cacheTotalSize">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-name">Entries:</span>
+        <span class="stat-value" id="cacheTotalEntries">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-name">Oldest Entry:</span>
+        <span class="stat-value" id="cacheOldestEntry">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-name">Newest Entry:</span>
+        <span class="stat-value" id="cacheNewestEntry">—</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Recent Entries</label>
+      <div id="cacheEntryList" class="cache-entry-list"></div>
     </div>
   </div>
 </div>
@@ -473,6 +528,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="js/ai-core.js"></script>
+<script src="js/offline-cache.js"></script>
 <script src="js/audio-engine.js"></script>
 <script src="js/fx-shader.js"></script>
 <script src="js/mod-engine.js"></script>

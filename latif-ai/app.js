@@ -509,8 +509,7 @@ async function streamResponse(chat, voiceOpts) {
       }
     }
 
-    const endpoint = getEndpoint();
-    const res = await fetch(endpoint.url, {
+    const res = await fetch(`${baseUrl()}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: State.abortCtrl.signal,
@@ -518,6 +517,14 @@ async function streamResponse(chat, voiceOpts) {
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    // Cache response if non-streaming and successful
+    if (!State.stream && res.ok) {
+      const resClone = res.clone();
+      const data = await resClone.json();
+      const responseText = data.message?.content || "";
+      OfflineCacheInstance.saveChatResponse(msgs, model, responseText).catch(err => console.warn("Cache save failed:", err));
+    }
 
     if (State.stream && res.body) {
       const reader = res.body.getReader();
@@ -531,38 +538,23 @@ async function streamResponse(chat, voiceOpts) {
         buf = lines.pop();
         for (const line of lines) {
           if (!line.trim()) continue;
-          if (endpoint.isOpenAI) {
-            if (!line.startsWith("data:")) continue;
-            const payload = line.slice(5).trim();
-            if (payload === "[DONE]") { finalizeResponse(chat, acc, row, bubble, voiceOpts); continue; }
-            try {
-              const json = JSON.parse(payload);
-              const delta = json.choices && json.choices[0] && json.choices[0].delta;
-              if (delta && delta.content) {
-                if (firstChunk) { bubble.innerHTML = ""; firstChunk = false; }
-                acc += delta.content;
-                scheduleRender();
-              }
-            } catch (_) { /* partial SSE frame, ignore */ }
-          } else {
-            try {
-              const json = JSON.parse(line);
-              if (json.message && json.message.content) {
-                if (firstChunk) { bubble.innerHTML = ""; firstChunk = false; }
-                acc += json.message.content;
-                scheduleRender();
-              }
-              if (json.done) {
-                finalizeResponse(chat, acc, row, bubble, voiceOpts);
-              }
-            } catch (_) { /* partial json, ignore */ }
-          }
+          try {
+            const json = JSON.parse(line);
+            if (json.message && json.message.content) {
+              if (firstChunk) { bubble.innerHTML = ""; firstChunk = false; }
+              acc += json.message.content;
+              scheduleRender();
+            }
+            if (json.done) {
+              finalizeResponse(chat, acc, row, bubble, voiceOpts);
+            }
+          } catch (_) { /* partial json, ignore */ }
         }
       }
       if (acc) finalizeResponse(chat, acc, row, bubble, voiceOpts, true);
     } else {
       const data = await res.json();
-      acc = endpoint.isOpenAI ? (data.choices?.[0]?.message?.content || "(no response)") : (data.message?.content || "(no response)");
+      acc = data.message?.content || "(no response)";
       bubble.setAttribute("dir", isArabic(acc) ? "rtl" : "ltr");
       bubble.innerHTML = renderMarkdown(acc);
       finalizeResponse(chat, acc, row, bubble, voiceOpts);
@@ -573,6 +565,28 @@ async function streamResponse(chat, voiceOpts) {
       if (acc) finalizeResponse(chat, acc, row, bubble, voiceOpts, true);
       else if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
     } else {
+      // Try offline cache fallback
+      if (!State.serverAvailable && msgs.length > 1) {
+        const lastUserMsg = msgs[msgs.length - 1]?.content || "";
+        const cached = await OfflineCacheInstance.searchCache(lastUserMsg, model);
+
+        if (cached && cached.length > 0) {
+          const cachedResponse = cached[0].responseText;
+          const timestamp = new Date(cached[0].timestamp).toLocaleTimeString();
+
+          const disclamer = `**[📴 OFFLINE MODE]** Showing cached response from ${timestamp} — this may not reflect current context or recent changes.\n\n`;
+          acc = disclamer + cachedResponse;
+
+          bubble.setAttribute("dir", isArabic(acc) ? "rtl" : "ltr");
+          bubble.innerHTML = renderMarkdown(acc);
+          finalizeResponse(chat, acc, row, bubble, voiceOpts);
+          toast("Serving from offline cache");
+          if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone(acc);
+          return;
+        }
+      }
+
+      // No cache available or server might be online
       bubble.innerHTML = `<span style="color:var(--red)">⚠ Connection error: ${escapeHtml(err.message)}<br/><br/>Make sure your Ollama server is running and reachable at <code>${escapeHtml(baseUrl())}</code>.</span>`;
       toast("Failed to reach local model server");
       if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
@@ -1169,6 +1183,72 @@ $("btnWipeData").addEventListener("click", () => {
     toast("All conversations cleared");
   }
 });
+
+/* ───────── V3: Offline Cache UI ───────── */
+async function updateCacheDisplay() {
+  try {
+    const stats = await OfflineCacheInstance.getCacheSize();
+    $("cacheSizeDisplay").textContent = stats.sizeKB > 0
+      ? `${stats.sizeKB} KB`
+      : "—";
+    $("cacheCountDisplay").textContent = String(stats.entryCount);
+  } catch (err) {
+    console.warn("Cache display update failed:", err);
+  }
+}
+
+$("btnViewCacheStats").addEventListener("click", async () => {
+  try {
+    const stats = await OfflineCacheInstance.getCacheStats();
+    $("cacheTotalSize").textContent = `${stats.totalSizeKB} KB`;
+    $("cacheTotalEntries").textContent = String(stats.entryCount);
+    $("cacheOldestEntry").textContent = stats.oldestEntry
+      ? new Date(stats.oldestEntry).toLocaleDateString()
+      : "—";
+    $("cacheNewestEntry").textContent = stats.newestEntry
+      ? new Date(stats.newestEntry).toLocaleDateString()
+      : "—";
+
+    const entries = await OfflineCacheInstance.getRecentEntries(10);
+    if (entries.length === 0) {
+      $("cacheEntryList").innerHTML = '<div class="cache-empty">No cached responses yet</div>';
+    } else {
+      $("cacheEntryList").innerHTML = entries.map((e) => `
+        <div class="cache-entry">
+          <div class="entry-model">${escapeHtml(e.modelName)}</div>
+          <div class="entry-query">${escapeHtml(e.queryText.substring(0, 60))}</div>
+          <div class="entry-date">${new Date(e.timestamp).toLocaleDateString()}</div>
+        </div>
+      `).join("");
+    }
+
+    $("cacheStatsModal").classList.add("open");
+    $("cacheStatsBackdrop").classList.add("open");
+  } catch (err) {
+    toast("Failed to load cache stats: " + err.message);
+  }
+});
+
+$("btnCloseCacheStats").addEventListener("click", () => {
+  $("cacheStatsModal").classList.remove("open");
+  $("cacheStatsBackdrop").classList.remove("open");
+});
+
+$("btnClearCache").addEventListener("click", async () => {
+  if (confirm("Clear all cached responses? This cannot be undone.")) {
+    try {
+      await OfflineCacheInstance.clearCache();
+      await updateCacheDisplay();
+      toast("✓ Cache cleared");
+    } catch (err) {
+      toast("✗ Failed to clear cache: " + err.message);
+    }
+  }
+});
+
+// Update cache display on init and periodically
+updateCacheDisplay();
+setInterval(updateCacheDisplay, 60000);
 
 /* ───────── INIT ───────── */
 async function init() {
