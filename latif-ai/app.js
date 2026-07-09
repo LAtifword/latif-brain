@@ -279,6 +279,7 @@ function stopSpeaking() {
 }
 
 /* ───────── HISTORY (SIDEBAR) ───────── */
+let historyPressTimer = null;
 function renderHistory(filter = "") {
   const list = $("historyList");
   list.innerHTML = "";
@@ -295,11 +296,7 @@ function renderHistory(filter = "") {
     const item = document.createElement("button");
     item.className = "history-item" + (c.id === State.activeChat ? " active" : "");
     item.innerHTML = `${c.pinned ? '<span class="h-pin">📌</span>' : ""}<span class="h-title">${escapeHtml(c.title)}</span>`;
-    item.addEventListener("click", () => renderChat(c.id));
-    item.addEventListener("contextmenu", (e) => { e.preventDefault(); openMsgMenuFor(c.id); });
-    let pressTimer;
-    item.addEventListener("touchstart", () => { pressTimer = setTimeout(() => openMsgMenuFor(c.id), 500); });
-    item.addEventListener("touchend", () => clearTimeout(pressTimer));
+    item.dataset.chatId = c.id;
     list.appendChild(item);
   });
 }
@@ -360,20 +357,7 @@ function populateModelLists() {
     item.innerHTML = `<div class="dd-model-icon">${m.name[0].toUpperCase()}</div>
       <div class="dd-model-meta"><div class="dd-model-name">${m.name}</div><div class="dd-model-size">${sizeGB} GB</div></div>
       ${m.name === activeModel ? '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}`;
-    item.addEventListener("click", () => {
-      if (pinEl && pinEl.checked && chat) {
-        chat.model = m.name;
-        saveChats();
-        toast(`${m.name} pinned to this chat`);
-      } else {
-        State.model = m.name;
-        saveState();
-        toast(`Switched to ${m.name}`);
-      }
-      updateModelLabel();
-      populateModelLists();
-      closeDropdowns();
-    });
+    item.dataset.modelName = m.name;
     list.appendChild(item);
 
     const opt = document.createElement("option");
@@ -423,7 +407,11 @@ async function sendMessage(voiceOpts, overrideText) {
     await Promise.all(fileAttachments.map((a) => ragIndexFile(chat, a.name, a.content)));
   }
 
-  await streamResponse(chat, voiceOpts);
+  // Queue message for processing (prevents concurrent generation race condition)
+  await GlobalRequestQueue.enqueue(
+    () => streamResponse(chat, voiceOpts),
+    { chatId: chat.id, userText: text.slice(0, 50) }
+  );
 }
 
 async function regenerateLast() {
@@ -436,7 +424,11 @@ async function regenerateLast() {
     saveChats();
     renderChat(chat.id);
   }
-  await streamResponse(chat);
+  // Queue regeneration request
+  await GlobalRequestQueue.enqueue(
+    () => streamResponse(chat),
+    { chatId: chat.id, action: "regenerate" }
+  );
 }
 
 async function streamResponse(chat, voiceOpts) {
@@ -635,16 +627,12 @@ function renderAttachPreview() {
   State.attachments.forEach((a, idx) => {
     const item = document.createElement("div");
     item.className = "attach-preview-item";
+    item.dataset.attachIdx = idx;
     if (a.type === "image") {
       item.innerHTML = `<img src="data:image/png;base64,${a.base64}" /><button class="attach-remove">✕</button>`;
     } else {
       item.innerHTML = `<div class="chip">📄<br/>${escapeHtml(a.name.slice(0, 10))}</div><button class="attach-remove">✕</button>`;
     }
-    item.querySelector(".attach-remove").addEventListener("click", () => {
-      State.attachments.splice(idx, 1);
-      renderAttachPreview();
-      updateSendBtn();
-    });
     wrap.appendChild(item);
   });
 }
@@ -705,6 +693,18 @@ $("fileInput").addEventListener("change", async (e) => {
   updateSendBtn();
   closeAttachSheet();
   e.target.value = "";
+});
+
+/* ───────── ATTACHMENT PREVIEW DELEGATION ───────── */
+$("attachPreview").addEventListener("click", (e) => {
+  const btn = e.target.closest(".attach-remove");
+  if (btn) {
+    const item = btn.closest(".attach-preview-item");
+    const idx = parseInt(item.dataset.attachIdx, 10);
+    State.attachments.splice(idx, 1);
+    renderAttachPreview();
+    updateSendBtn();
+  }
 });
 
 /* ───────── INPUT BEHAVIOR ───────── */
@@ -943,6 +943,28 @@ $("btnNewChat").addEventListener("click", () => {
 });
 $("searchChats").addEventListener("input", (e) => renderHistory(e.target.value));
 
+/* ───────── HISTORY DELEGATION (event bubbling, no listener leak) ───────── */
+$("historyList").addEventListener("click", (e) => {
+  const item = e.target.closest(".history-item");
+  if (item) renderChat(item.dataset.chatId);
+});
+$("historyList").addEventListener("contextmenu", (e) => {
+  const item = e.target.closest(".history-item");
+  if (item) {
+    e.preventDefault();
+    openMsgMenuFor(item.dataset.chatId);
+  }
+});
+$("historyList").addEventListener("touchstart", (e) => {
+  const item = e.target.closest(".history-item");
+  if (item) {
+    historyPressTimer = setTimeout(() => openMsgMenuFor(item.dataset.chatId), 500);
+  }
+});
+$("historyList").addEventListener("touchend", () => {
+  clearTimeout(historyPressTimer);
+});
+
 /* ───────── DROPDOWNS ───────── */
 function closeDropdowns() {
   $("modelDropdown").classList.remove("open");
@@ -968,6 +990,27 @@ document.addEventListener("click", (e) => {
 });
 $("btnRefreshModels").addEventListener("click", () => { fetchModels(); toast("Refreshed model list"); });
 $("modelPinChat").addEventListener("change", populateModelLists);
+
+/* ───────── MODEL LIST DELEGATION ───────── */
+$("modelList").addEventListener("click", (e) => {
+  const item = e.target.closest(".dd-model-item");
+  if (!item) return;
+  const modelName = item.dataset.modelName;
+  const chat = State.activeChat ? State.chats[State.activeChat] : null;
+  const pinEl = $("modelPinChat");
+  if (pinEl && pinEl.checked && chat) {
+    chat.model = modelName;
+    saveChats();
+    toast(`${modelName} pinned to this chat`);
+  } else {
+    State.model = modelName;
+    saveState();
+    toast(`Switched to ${modelName}`);
+  }
+  updateModelLabel();
+  populateModelLists();
+  closeDropdowns();
+});
 
 /* message menu actions */
 $("actDelete").addEventListener("click", () => {
@@ -1125,13 +1168,6 @@ function renderMemoryList() {
   list.innerHTML = State.memory.map((m, i) =>
     `<div class="gxd-memory-item"><span>${escapeHtml(m)}</span><button data-idx="${i}">✕</button></div>`
   ).join("");
-  list.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      State.memory.splice(parseInt(btn.dataset.idx, 10), 1);
-      saveState();
-      renderMemoryList();
-    });
-  });
 }
 function addMemory() {
   const input = $("memoryInput");
@@ -1144,6 +1180,17 @@ function addMemory() {
 }
 $("btnMemoryAdd").addEventListener("click", addMemory);
 $("memoryInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addMemory(); } });
+
+/* ───────── MEMORY LIST DELEGATION ───────── */
+$("memoryList").addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (btn) {
+    const idx = parseInt(btn.dataset.idx, 10);
+    State.memory.splice(idx, 1);
+    saveState();
+    renderMemoryList();
+  }
+});
 
 document.querySelectorAll("#perfSeg .seg-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
