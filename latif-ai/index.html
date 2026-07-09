@@ -4,16 +4,21 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>LATIF AI</title>
-<meta name="theme-color" content="#000000" />
+<meta name="theme-color" content="#fa1e4e" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="LATIF" />
 <link rel="manifest" href="manifest.json" />
-<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="css/gx-design.css" />
 <link rel="stylesheet" href="css/gx-mods.css" />
 </head>
 <body>
+
+<!-- Always-on GX shell backdrop (behind any mod wallpaper/shader) -->
+<div class="gxd-underwave"></div>
+<div id="gxdScanlineOverlay"></div>
 
 <!-- ════════════ STATUS / TOP BAR ════════════ -->
 <div class="topbar">
@@ -146,6 +151,13 @@
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <input id="searchChats" placeholder="Search chats" />
   </div>
+
+  <!-- ════ LATIF Corner — GX Corner analog: quick prompts ════ -->
+  <div class="gxd-corner">
+    <div class="gxd-corner-title">LATIF Corner</div>
+    <div class="gxd-corner-chips" id="cornerChips"></div>
+  </div>
+
   <button class="drawer-action" id="drawerSettingsTop">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
     Connection &amp; Settings
@@ -308,22 +320,50 @@
     <div class="field-group">
       <label class="field-label">GX Mods</label>
       <div class="mod-grid" id="modGrid"></div>
-      <div class="field-hint">Opera GX-style mods restyle the whole app from a single <code>manifest.json</code> — colors, live wallpaper, WebGL shader glow, glass panels &amp; sounds. Drop a new folder in <code>/mods/</code> to add your own.</div>
+      <div class="field-hint">Opera GX-style mods restyle the whole app from a real <code>manifest.json</code> (Opera's public mod schema) — theme HSL, live wallpaper, WebGL shader glow, glass panels, procedural &amp; file-based sounds. Drop a new folder in <code>/mods/</code> to add your own.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Shader FX Intensity</label>
+      <div class="seg-control wide" id="fxSeg">
+        <button class="seg-btn" data-fx="off">Off</button>
+        <button class="seg-btn" data-fx="low">Low</button>
+        <button class="seg-btn active" data-fx="med">Med</button>
+        <button class="seg-btn" data-fx="high">High</button>
+      </div>
+      <div class="field-hint">Full-screen WebGL scanline/vignette/grain overlay. Auto-lowers if your device's fps drops below ~40, and falls back to a lightweight CSS scanline if WebGL isn't available.</div>
     </div>
 
     <div class="field-group row-between">
-      <label class="field-label" style="margin:0">Interface sounds</label>
-      <label class="switch"><input type="checkbox" id="gxSoundToggle" /><span class="slider-pill"></span></label>
-    </div>
-
-    <div class="field-group row-between">
-      <label class="field-label" style="margin:0">Ambient soundscape</label>
+      <label class="field-label" style="margin:0">Adaptive background music</label>
       <label class="switch"><input type="checkbox" id="gxAmbientToggle" /><span class="slider-pill"></span></label>
     </div>
 
     <div class="field-group row-between">
       <label class="field-label" style="margin:0">Focus mode (dim chrome)</label>
       <label class="switch"><input type="checkbox" id="gxFocusToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">System Monitor <span style="text-transform:none;font-weight:500;color:var(--text-faint)">(Termux backend)</span></label>
+      <div class="field-row">
+        <input id="monitorUrl" class="field-input" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+        <button class="field-btn" id="btnMonitorRefresh" style="margin:0;width:auto;padding:12px 16px;">↻</button>
+      </div>
+      <div id="monitorBody" style="margin-top:12px;"></div>
+      <div class="field-hint">Reads live CPU / RAM / battery / Ollama VRAM from <code>backend/stats.py</code> running in Termux (<code>uvicorn stats:app --port 8000</code>). Hidden automatically if the backend isn't reachable.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Voice Backend</label>
+      <div class="seg-control wide" id="voiceBackendSeg">
+        <button class="seg-btn active" data-backend="web">Browser (Web Speech)</button>
+        <button class="seg-btn" data-backend="whisper">whisper.cpp (Termux)</button>
+      </div>
+      <div class="field-row" id="whisperUrlRow" style="margin-top:10px; display:none;">
+        <input id="whisperUrl" class="field-input" placeholder="http://127.0.0.1:8001" value="http://127.0.0.1:8001" />
+      </div>
+      <div class="field-hint">whisper.cpp gives offline Arabic/English transcription with no dependency on Google's speech engine — run <code>backend/transcribe.py</code> in Termux (<code>uvicorn transcribe:app --port 8001</code>).</div>
     </div>
 
     <div class="field-group">
@@ -342,8 +382,19 @@
 <!-- ════════════ TOAST ════════════ -->
 <div class="toast" id="toast"></div>
 
+<script src="js/audio-engine.js"></script>
+<script src="js/fx-shader.js"></script>
 <script src="js/mod-engine.js"></script>
 <script src="app.js"></script>
 <script src="js/gx-settings.js"></script>
+<script src="js/stats-gauges.js"></script>
+<script src="js/voice-backend.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>

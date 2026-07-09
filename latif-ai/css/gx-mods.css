@@ -1,64 +1,55 @@
 /* ════════════════════════════════════════════════════════════════
-   LATIF AI — GX MOD LAYER
-   Loaded alongside style.css. Inert until <html class="gx-active">.
-   The engine injects --gx-* custom properties from a mod manifest;
-   this file remaps them onto the app's native design tokens so the
-   ENTIRE existing UI transforms, then layers on glass + depth + glow.
+   LATIF AI — GX MOD LAYER (v2)
+   Loaded alongside style.css + gx-design.css. Inert until
+   <html class="gx-active">. js/mod-engine.js injects --gx-*-color
+   custom properties from a mod's real Opera-schema theme HSL; this
+   file remaps them onto the app's native design tokens so the ENTIRE
+   existing UI transforms, then layers on glass + depth + glow.
    ════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Fallbacks — overridden per-mod by the engine from manifest.theme */
-  --gx-primary-color:   #FA1E4E;
-  --gx-secondary-color: #1E1E2E;
-  --gx-accent-color:    #00D4AA;
-  --gx-text-color:      #EAEAEA;
-  --gx-text-secondary:  #8B8B9A;
-  --gx-background-color: #0A0A0F;
-  --gx-surface-color:   rgba(30, 30, 46, 0.6);
-  --gx-border-color:    rgba(255, 255, 255, 0.08);
-  --gx-glow-color:      rgba(250, 30, 78, 0.3);
+  /* Fallbacks — overridden per-mod by the engine from theme.<variant> HSL */
+  --gx-accent-color:    hsl(347, 96%, 55%);
+  --gx-accent2-color:   hsl(168, 100%, 42%);
+  --gx-bg-color:        hsl(240, 21%, 15%);
+  --gx-bg-elev-color:   hsl(240, 21%, 21%);
+  --gx-bg-deep-color:   hsl(240, 20%, 5%);
+  --gx-surface-color:   hsla(240, 21%, 21%, 0.6);
+  --gx-text-color:      hsl(0, 0%, 90%);
+  --gx-text2-color:     hsl(0, 0%, 70%);
+  --gx-border-color:    rgba(250, 30, 78, 0.30);
+  --gx-glow-color:      rgba(250, 30, 78, 0.35);
   --gx-blur: 12px;
-  --gx-opacity: 0.6;
-  --gx-vignette: 0.4;
-  --gx-glow-intensity: 0.5;
-  --gx-anim-speed: 1;
-  --gx-font-scale: 1;
-  --gx-vignette-shadow: inset 0 0 200px rgba(0,0,0,0.4);
 }
 
 /* ─── Remap native tokens → mod theme when a mod is active ─── */
 html.gx-active {
-  --bg:              var(--gx-background-color);
-  --surface:         var(--gx-secondary-color);
+  --bg:              var(--gx-bg-deep-color);
+  --surface:         var(--gx-bg-color);
   --surface2:        var(--gx-surface-color);
   --surface3:        var(--gx-surface-color);
-  --surface-elevated: var(--gx-secondary-color);
+  --surface-elevated: var(--gx-bg-elev-color);
   --border:          var(--gx-border-color);
   --border-strong:   var(--gx-border-color);
   --text:            var(--gx-text-color);
-  --text-dim:        var(--gx-text-secondary);
-  --text-faint:      var(--gx-text-secondary);
-  --gold:            var(--gx-primary-color);
-  --gold2:           var(--gx-accent-color);
-  --amber:           var(--gx-primary-color);
-  --accent:          var(--gx-accent-color);
+  --text-dim:        var(--gx-text2-color);
+  --text-faint:      var(--gx-text2-color);
+  --gold:            var(--gx-accent-color);
+  --gold2:           var(--gx-accent2-color);
+  --amber:           var(--gx-accent-color);
+  --accent:          var(--gx-accent2-color);
   --bubble-user:     var(--gx-surface-color);
 }
 
-/* Live wallpaper / shader canvases sit behind everything; let them show. */
 html.gx-active body { background: transparent; }
-html.gx-active { background: var(--gx-background-color); }
-#gx-shader-bg, #gx-live-wallpaper { will-change: transform; }
+html.gx-active { background: var(--gx-bg-deep-color); }
+#gx-live-wallpaper { will-change: transform; }
 
-/* Typography scale hook */
-html.gx-active body { font-size: calc(15px * var(--gx-font-scale)); }
-
-/* Vignette overlay (non-interactive, above wallpaper, below UI) */
 html.gx-active body::after {
   content: "";
   position: fixed; inset: 0; z-index: 0;
   pointer-events: none;
-  box-shadow: var(--gx-vignette-shadow);
+  box-shadow: inset 0 0 200px rgba(0,0,0,0.4);
 }
 html.gx-active .topbar,
 html.gx-active .chat-scroll,
@@ -78,18 +69,15 @@ html.gx-active .msg-row.user .bubble {
   border: 1px solid var(--gx-border-color);
 }
 
-/* Topbar becomes a translucent glass rail */
 html.gx-active .topbar {
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--gx-background-color) 85%, transparent),
-    transparent);
+    color-mix(in srgb, var(--gx-bg-deep-color) 85%, transparent), transparent);
   -webkit-backdrop-filter: blur(calc(var(--gx-blur) * 0.6));
   backdrop-filter: blur(calc(var(--gx-blur) * 0.6));
 }
 html.gx-active .input-stage {
   background: linear-gradient(0deg,
-    color-mix(in srgb, var(--gx-background-color) 90%, transparent),
-    transparent);
+    color-mix(in srgb, var(--gx-bg-deep-color) 90%, transparent), transparent);
 }
 
 /* ─── Dynamic depth: elevation + colored glow ─── */
@@ -98,36 +86,23 @@ html.gx-active .modal,
 html.gx-active .attach-sheet    { box-shadow: 0 -8px 40px rgba(0,0,0,0.5), 0 0 60px var(--gx-glow-color); }
 html.gx-active .dropdown-sheet  { box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 24px var(--gx-glow-color); }
 html.gx-active .input-bar:focus-within {
-  border-color: var(--gx-primary-color);
-  box-shadow: 0 0 0 1px var(--gx-primary-color),
-              0 0 24px var(--gx-glow-color);
+  border-color: var(--gx-accent-color);
+  box-shadow: 0 0 0 1px var(--gx-accent-color), 0 0 24px var(--gx-glow-color);
 }
+html.gx-active .send-btn:not(:disabled) { box-shadow: 0 0 18px var(--gx-glow-color); }
 
-/* Send button glow */
-html.gx-active .send-btn:not(:disabled) {
-  box-shadow: 0 0 18px var(--gx-glow-color);
-}
-
-/* Model dropdown active + chips + brand get the mod's accent glow */
 html.gx-active .brand-word {
-  background: linear-gradient(135deg, var(--gx-primary-color), var(--gx-accent-color));
+  background: linear-gradient(135deg, var(--gx-accent-color), var(--gx-accent2-color));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 8px var(--gx-glow-color));
 }
 html.gx-active .suggest-chip:hover,
 html.gx-active .suggest-chip:active {
-  border-color: var(--gx-primary-color);
+  border-color: var(--gx-accent-color);
   box-shadow: 0 0 16px var(--gx-glow-color);
 }
-
-/* Online status dot glow follows accent */
-html.gx-active .dot.online { background: var(--gx-accent-color); box-shadow: 0 0 8px var(--gx-accent-color); }
-
-/* ─── GX signature scrollbar ─── */
-html.gx-active ::-webkit-scrollbar-thumb {
-  background: var(--gx-primary-color);
-  box-shadow: 0 0 6px var(--gx-glow-color);
-}
+html.gx-active .dot.online { background: var(--gx-accent2-color); box-shadow: 0 0 8px var(--gx-accent2-color); }
+html.gx-active ::-webkit-scrollbar-thumb { background: var(--gx-accent-color); box-shadow: 0 0 6px var(--gx-glow-color); }
 
 /* ─── Focus Mode: dim chrome, sharpen conversation ─── */
 html.gx-focus-mode .topbar,
@@ -137,7 +112,7 @@ html.gx-focus-mode .chat-scroll { filter: contrast(1.06) brightness(1.02); }
 html.gx-focus-mode body::after { box-shadow: inset 0 0 260px rgba(0,0,0,0.6); }
 
 /* ════════════════════════════════════════════════════════════════
-   Reusable GX primitives (for any bespoke .gx-* markup you add)
+   Reusable GX primitives
    ════════════════════════════════════════════════════════════════ */
 .gx-panel {
   background: var(--gx-surface-color);
@@ -153,7 +128,7 @@ html.gx-focus-mode body::after { box-shadow: inset 0 0 260px rgba(0,0,0,0.6); }
               inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .gx-btn {
-  background: linear-gradient(135deg, var(--gx-primary-color), var(--gx-accent-color));
+  background: linear-gradient(135deg, var(--gx-accent-color), var(--gx-accent2-color));
   border: none; border-radius: 12px; padding: 12px 24px; color: #fff;
   font-weight: 600; cursor: pointer; position: relative; overflow: hidden;
   transition: all .3s ease;
@@ -169,11 +144,11 @@ html.gx-focus-mode body::after { box-shadow: inset 0 0 260px rgba(0,0,0,0.6); }
 .gx-border-glow { position: relative; }
 .gx-border-glow::after {
   content: ""; position: absolute; inset: -2px; border-radius: inherit; padding: 2px;
-  background: linear-gradient(45deg, var(--gx-primary-color), var(--gx-accent-color), var(--gx-primary-color));
+  background: linear-gradient(45deg, var(--gx-accent-color), var(--gx-accent2-color), var(--gx-accent-color));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
-  animation: gxBorderRotate calc(4s / var(--gx-anim-speed)) linear infinite;
+  animation: gxBorderRotate 4s linear infinite;
   opacity: .6; pointer-events: none;
 }
 @keyframes gxBorderRotate { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }

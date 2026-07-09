@@ -1,7 +1,9 @@
 /* ════════════════════════════════════════════════════════════════
-   LATIF AI — GX MODS settings wiring
-   Standalone (runs after app.js). Populates the "GX Mods" panel and
-   toggles in the Settings modal without touching the core app IIFE.
+   LATIF AI — GX MODS settings wiring (v2)
+   Standalone (runs after app.js + mod-engine.js + audio/fx engines).
+   Populates the "GX Mods" panel, Shader FX intensity, ambient/focus
+   toggles, and the "LATIF Corner" quick-prompt panel — all without
+   touching app.js.
    ════════════════════════════════════════════════════════════════ */
 (function () {
 "use strict";
@@ -18,6 +20,8 @@ function toast(msg, ms = 2000) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove("show"), ms);
 }
+
+function hslCss(o) { return o ? `hsl(${o.h},${o.s}%,${o.l}%)` : "#fa1e4e"; }
 
 const manifestCache = {};
 async function loadManifest(name) {
@@ -47,15 +51,10 @@ function card(info, isActive) {
   return btn;
 }
 
-async function render() {
+async function renderModGrid() {
   const grid = $("modGrid");
   if (!grid || !window.LATIF) return;
   const active = window.LATIF.currentMod();
-
-  const sT = $("gxSoundToggle"), aT = $("gxAmbientToggle"), fT = $("gxFocusToggle");
-  if (sT) sT.checked = window.LATIF.isSoundOn();
-  if (aT) aT.checked = window.LATIF.isAmbientOn();
-  if (fT) fT.checked = window.LATIF.isFocusOn();
 
   grid.innerHTML = "";
   grid.appendChild(card({
@@ -65,46 +64,93 @@ async function render() {
 
   for (const id of window.LATIF.listMods()) {
     const m = await loadManifest(id);
-    const t = (m && m.theme) || {};
+    const payload = m && m.mod && m.mod.payload;
+    const theme = (payload && payload.theme && payload.theme.dark) || {};
     grid.appendChild(card({
       id,
       name: (m && m.name) || id,
       desc: (m && m.description) || "",
-      primary: t.primary_color || "#FA1E4E",
-      accent: t.accent_color || "#00D4AA",
+      primary: hslCss(theme.gx_accent),
+      accent: hslCss(theme.gx_accent_2 || theme.gx_accent),
     }, active === id));
   }
 }
 
-function wire() {
-  const sT = $("gxSoundToggle"), aT = $("gxAmbientToggle"), fT = $("gxFocusToggle");
-  if (sT) sT.addEventListener("change", (e) => {
-    window.LATIF.setSound(e.target.checked);
-    toast(e.target.checked ? "Interface sounds on" : "Interface sounds off");
+function renderToggles() {
+  const aT = $("gxAmbientToggle"), fT = $("gxFocusToggle");
+  if (aT && window.LATIF) aT.checked = window.LATIF.isAmbientOn();
+  if (fT && window.LATIF) fT.checked = window.LATIF.isFocusOn();
+  const fxSeg = $("fxSeg");
+  if (fxSeg && window.LATIF_FX) {
+    fxSeg.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.fx === window.LATIF_FX.getLevel()));
+  }
+}
+
+async function render() { await renderModGrid(); renderToggles(); }
+
+function wireCorner() {
+  const chips = $("cornerChips");
+  if (!chips) return;
+  const prompts = [
+    ["✍️ فقرة فلسفية", "اكتب لي فقرة افتتاحية فلسفية بأسلوب كافكا"],
+    ["📋 Summarize", "Summarize this in 3 bullet points:"],
+    ["💡 اشرح ببساطة", "اشرح لي هذا المفهوم بطريقة بسيطة:"],
+    ["🌱 Brainstorm", "Help me brainstorm ideas for:"],
+    ["🐞 Debug", "Help me debug this error:"],
+    ["🔤 ترجم", "ترجم هذا النص إلى العربية:"],
+  ];
+  chips.innerHTML = prompts.map(([label, val]) =>
+    `<button class="gxd-corner-chip" data-prompt="${esc(val)}">${esc(label)}</button>`).join("");
+  chips.addEventListener("click", (e) => {
+    const btn = e.target.closest(".gxd-corner-chip");
+    if (!btn) return;
+    const input = $("promptInput");
+    if (!input) return;
+    input.value = btn.dataset.prompt + " ";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+    $("btnCloseDrawer") && $("btnCloseDrawer").click();
   });
+}
+
+function wire() {
+  const aT = $("gxAmbientToggle"), fT = $("gxFocusToggle");
   if (aT) aT.addEventListener("change", (e) => {
     window.LATIF.setAmbient(e.target.checked);
-    toast(e.target.checked ? "Ambient soundscape on" : "Ambient off");
+    toast(e.target.checked ? "Adaptive background music on" : "Background music off");
   });
   if (fT) fT.addEventListener("change", (e) => {
     window.LATIF.engine.applyFocus(e.target.checked);
     toast(e.target.checked ? "Focus mode on" : "Focus mode off");
   });
 
-  // Re-render the panel whenever the Settings modal opens.
+  const fxSeg = $("fxSeg");
+  if (fxSeg) {
+    fxSeg.querySelectorAll(".seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        window.LATIF_FX.setLevel(btn.dataset.fx);
+        fxSeg.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+        toast(`Shader FX: ${btn.textContent.trim()}`);
+      });
+    });
+  }
+
+  window.addEventListener("gx:fxautodrop", (e) => {
+    toast(`Shader FX auto-lowered to ${e.detail.level} (low fps)`);
+    renderToggles();
+  });
+
+  wireCorner();
+
   const modal = $("settingsModal");
   if (modal) {
-    new MutationObserver(() => {
-      if (modal.classList.contains("open")) render();
-    }).observe(modal, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(() => { if (modal.classList.contains("open")) render(); })
+      .observe(modal, { attributes: true, attributeFilter: ["class"] });
   }
   render();
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", wire);
-} else {
-  wire();
-}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire);
+else wire();
 
 })();

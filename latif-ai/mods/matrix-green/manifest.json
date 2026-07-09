@@ -1,6 +1,6 @@
 {
-  "name": "Underwave",
-  "description": "Opera GX's current design language — deep violet with crimson & cyan glow.",
+  "name": "Matrix Green",
+  "description": "Classic hacker terminal — phosphor green code rain on near-black.",
   "developer": { "name": "Latif" },
   "manifest_version": 3,
   "version": "1.0",
@@ -10,14 +10,14 @@
     "payload": {
       "theme": {
         "dark": {
-          "gx_accent":         { "h": 347, "s": 96, "l": 55 },
-          "gx_secondary_base": { "h": 240, "s": 21, "l": 15 },
-          "gx_accent_2":       { "h": 168, "s": 100, "l": 42 }
+          "gx_accent":         { "h": 111, "s": 100, "l": 54 },
+          "gx_secondary_base": { "h": 137, "s": 41, "l": 9 },
+          "gx_accent_2":       { "h": 160, "s": 100, "l": 50 }
         },
         "light": {
-          "gx_accent":         { "h": 347, "s": 90, "l": 50 },
-          "gx_secondary_base": { "h": 250, "s": 30, "l": 96 },
-          "gx_accent_2":       { "h": 168, "s": 80, "l": 36 }
+          "gx_accent":         { "h": 111, "s": 70, "l": 32 },
+          "gx_secondary_base": { "h": 120, "s": 25, "l": 95 },
+          "gx_accent_2":       { "h": 160, "s": 70, "l": 28 }
         }
       },
       "wallpaper": {
@@ -25,7 +25,7 @@
         "light": { "type": "live", "source": "wallpaper.js" }
       },
       "shaders": {
-        "Midnight Glow": { "path": "shaders/midnight.frag" }
+        "Phosphor": { "path": "shaders/phosphor.frag" }
       },
       "background_music": [],
       "browser_sounds": {
