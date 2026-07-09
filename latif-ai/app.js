@@ -675,12 +675,21 @@ function readFileAsText(file) {
 $("fileInput").addEventListener("change", async (e) => {
   const files = Array.from(e.target.files || []);
   for (const file of files) {
+    // Validate file first
+    const validation = GlobalFileValidator.validateFile(file);
+    if (!validation.valid) {
+      toast(`⚠ ${validation.warning}`);
+      continue;
+    }
+    if (validation.warning && validation.willTruncate) {
+      toast(`⚠ ${validation.warning}`);
+    }
+
     if (file.type.startsWith("image/")) {
       const base64 = await readFileAsBase64(file);
       State.attachments.push({ type: "image", base64, name: file.name });
     } else if (file.type.startsWith("audio/")) {
-      // V3: multimodal — transcribe an uploaded audio file via the whisper.cpp
-      // backend (same endpoint as the live-recording Voice Backend control).
+      // Transcribe via whisper.cpp backend
       const whisperUrl = localStorage.getItem("latif_whisper_url") || "http://127.0.0.1:8001";
       toast(`Transcribing ${file.name}…`);
       try {
@@ -691,18 +700,24 @@ $("fileInput").addEventListener("change", async (e) => {
         const data = await res.json();
         const text = (data.text || "").trim();
         if (text) {
-          State.attachments.push({ type: "file", content: text.slice(0, 20000), name: `${file.name} (transcript)` });
+          const processed = GlobalFileValidator.processContent(text, file.name);
+          if (processed.warning) toast(`⚠ ${processed.warning}`);
+          State.attachments.push({ type: "file", content: processed.content, name: `${file.name} (transcript)` });
         } else {
           toast(`No speech detected in ${file.name}`);
         }
-      } catch (_) {
-        toast(`Couldn't transcribe ${file.name} — is backend/transcribe.py running? (Settings → Voice Backend)`);
+      } catch (err) {
+        GlobalErrorLogger.error("transcribe", err, { fileName: file.name });
+        toast(`Couldn't transcribe ${file.name} — check Voice Backend in Settings`);
       }
     } else {
       try {
         const content = await readFileAsText(file);
-        State.attachments.push({ type: "file", content: content.slice(0, 20000), name: file.name });
-      } catch {
+        const processed = GlobalFileValidator.processContent(content, file.name);
+        if (processed.warning) toast(`⚠ ${processed.warning}`);
+        State.attachments.push({ type: "file", content: processed.content, name: file.name });
+      } catch (err) {
+        GlobalErrorLogger.error("readFile", err, { fileName: file.name });
         toast(`Could not read ${file.name}`);
       }
     }
