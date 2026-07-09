@@ -246,19 +246,7 @@
       <select id="settingsModelSelect" class="field-select"><option>No models found</option></select>
     </div>
 
-    <div class="field-group">
-      <label class="field-label">AI Backend</label>
-      <div class="seg-control wide" id="backendSeg">
-        <button class="seg-btn active" data-backend="ollama">Ollama</button>
-        <button class="seg-btn" data-backend="openai">llama.cpp (OpenAI API)</button>
-      </div>
-      <div class="field-row" id="openaiUrlRow" style="margin-top:10px; display:none;">
-        <input id="openaiUrl" class="field-input" placeholder="http://127.0.0.1:8080/v1" value="http://127.0.0.1:8080/v1" />
-      </div>
-      <div class="field-hint">Switch to llama.cpp's OpenAI-compatible <code>llama-server</code> as an alternate backend. Tool calling and RAG currently require Ollama.</div>
-    </div>
-
-    <div class="field-group row-between">
+<div class="field-group row-between">
       <label class="field-label" style="margin:0">RAG (retrieve from attached files)</label>
       <label class="switch"><input type="checkbox" id="ragToggle" /><span class="slider-pill"></span></label>
     </div>

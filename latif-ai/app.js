@@ -485,8 +485,8 @@ async function streamResponse(chat, voiceOpts) {
   }
 
   try {
-    // Tool calling: opt-in, Ollama backend only, one non-streaming pre-check round.
-    if (State.backend === "ollama" && State.toolsEnabled) {
+    // Tool calling: opt-in, one non-streaming pre-check round.
+    if (State.toolsEnabled) {
       const precheck = await fetch(`${baseUrl()}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -573,8 +573,7 @@ async function streamResponse(chat, voiceOpts) {
       if (acc) finalizeResponse(chat, acc, row, bubble, voiceOpts, true);
       else if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
     } else {
-      const where = State.backend === "openai" ? State.openaiUrl : baseUrl();
-      bubble.innerHTML = `<span style="color:var(--red)">⚠ Connection error: ${escapeHtml(err.message)}<br/><br/>Make sure your ${State.backend === "openai" ? "llama.cpp" : "Ollama"} server is running and reachable at <code>${escapeHtml(where)}</code>.</span>`;
+      bubble.innerHTML = `<span style="color:var(--red)">⚠ Connection error: ${escapeHtml(err.message)}<br/><br/>Make sure your Ollama server is running and reachable at <code>${escapeHtml(baseUrl())}</code>.</span>`;
       toast("Failed to reach local model server");
       if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
     }
@@ -1093,17 +1092,7 @@ $("keepAliveSelect").addEventListener("change", (e) => { State.keepAlive = e.tar
 $("streamToggle").addEventListener("change", (e) => { State.stream = e.target.checked; saveState(); });
 $("autoSpeakToggle").addEventListener("change", (e) => { State.autoSpeak = e.target.checked; saveState(); });
 
-/* ───────── V2: AI Backend / RAG / Tools / Memory settings wiring ───────── */
-document.querySelectorAll("#backendSeg .seg-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    State.backend = btn.dataset.backend;
-    saveState();
-    document.querySelectorAll("#backendSeg .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
-    $("openaiUrlRow").style.display = State.backend === "openai" ? "flex" : "none";
-    toast(`Backend: ${State.backend === "openai" ? "llama.cpp (OpenAI API)" : "Ollama"}`);
-  });
-});
-$("openaiUrl").addEventListener("change", (e) => { State.openaiUrl = e.target.value.trim() || State.openaiUrl; saveState(); });
+/* ───────── V3: RAG / Tools / Memory settings wiring ───────── */
 $("ragToggle").addEventListener("change", (e) => {
   State.ragEnabled = e.target.checked;
   saveState();
@@ -1182,7 +1171,7 @@ $("btnWipeData").addEventListener("click", () => {
 });
 
 /* ───────── INIT ───────── */
-function init() {
+async function init() {
   applyTheme();
   renderHistory();
   if (State.activeChat && State.chats[State.activeChat] && State.chats[State.activeChat].messages.length) {
@@ -1190,6 +1179,7 @@ function init() {
   } else {
     renderWelcome();
   }
+  await autoDetectServer();
   fetchModels();
   updateSendBtn();
   $("voiceLangToggle").textContent = State.voiceLang === "auto" ? "AUTO" : State.voiceLang === "ar-SA" ? "العربية" : "ENGLISH";
@@ -1203,11 +1193,11 @@ function init() {
 document.addEventListener("DOMContentLoaded", init);
 if (document.readyState !== "loading") init();
 
-/* ───────── V3: minimal exports for js/calendar.js (kept explicit and
-   small — this is the only bridge calendar.js needs into app.js's
-   otherwise-private closure) ───────── */
+/* ───────── V3: minimal exports for js/calendar.js & ai-core.js network detection ───────── */
 window.renderChat = renderChat;
 window.closeDrawerGlobal = closeDrawer;
 window.sendMessageFromReminder = (promptText) => sendMessage(undefined, promptText);
+window.fetchModels = fetchModels;
+window.setServerStatus = setServerStatus;
 
 })();

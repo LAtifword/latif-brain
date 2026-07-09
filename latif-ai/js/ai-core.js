@@ -44,9 +44,13 @@ const State = {
   isGenerating: false,
   abortCtrl: null,
 
-  /* ── V2: backend, RAG, tools, memory ── */
-  backend: localStorage.getItem("latif_backend") || "ollama",       // "ollama" | "openai" (llama.cpp)
-  openaiUrl: localStorage.getItem("latif_openai_url") || "http://127.0.0.1:8080/v1",
+  /* ── V3: auto-detection, offline caching ── */
+  serverAvailable: false,
+  lastKnownWorkingServer: localStorage.getItem("latif_last_working_server") || null,
+  serverCheckInProgress: false,
+  serverCheckTimestamp: 0,
+
+  /* ── V3: RAG, tools, memory ── */
   embedModel: localStorage.getItem("latif_embed_model") || "nomic-embed-text",
   ragEnabled: localStorage.getItem("latif_rag") !== "false",
   toolsEnabled: localStorage.getItem("latif_tools") === "true",
@@ -73,12 +77,11 @@ function saveState() {
   localStorage.setItem("latif_autospeak", String(State.autoSpeak));
   localStorage.setItem("latif_stream", String(State.stream));
   localStorage.setItem("latif_theme", State.theme);
-  localStorage.setItem("latif_backend", State.backend);
-  localStorage.setItem("latif_openai_url", State.openaiUrl);
   localStorage.setItem("latif_embed_model", State.embedModel);
   localStorage.setItem("latif_rag", String(State.ragEnabled));
   localStorage.setItem("latif_tools", String(State.toolsEnabled));
   localStorage.setItem("latif_jsonmode", String(State.jsonMode));
+  localStorage.setItem("latif_last_working_server", State.lastKnownWorkingServer || "");
   localStorage.setItem("latif_memory", JSON.stringify(State.memory));
 }
 
@@ -122,7 +125,7 @@ function cosineSim(a, b) {
 }
 
 async function ragIndexFile(chat, name, content) {
-  if (!State.ragEnabled || State.backend !== "ollama") return;
+  if (!State.ragEnabled) return;
   const chunks = ragChunkText(content);
   chat.rag = chat.rag || [];
   for (const c of chunks) {
@@ -206,20 +209,8 @@ async function executeTool(name, args) {
   }
 }
 
-/* ───────── backend abstraction (Ollama / OpenAI-compatible llama.cpp) ───────── */
-function getEndpoint() {
-  if (State.backend === "openai") {
-    return { url: `${State.openaiUrl.replace(/\/$/, "")}/chat/completions`, isOpenAI: true };
-  }
-  return { url: `${baseUrl()}/api/chat`, isOpenAI: false };
-}
-
+/* ───────── Ollama request builder ───────── */
 function buildRequestBody(model, msgs, extra) {
-  if (State.backend === "openai") {
-    const body = { model, messages: msgs, stream: State.stream, temperature: State.temperature, top_p: State.topP, max_tokens: State.numPredict };
-    if (State.jsonMode) body.response_format = { type: "json_object" };
-    return body;
-  }
   const body = {
     model, messages: msgs, stream: State.stream, keep_alive: State.keepAlive,
     options: { temperature: State.temperature, top_p: State.topP, num_ctx: State.numCtx, num_predict: State.numPredict },
@@ -228,6 +219,69 @@ function buildRequestBody(model, msgs, extra) {
   if (extra) Object.assign(body, extra);
   return body;
 }
+
+/* ───────── V3: intelligent server auto-detection with fallback chain ───────── */
+async function probeServer(host, port) {
+  try {
+    const res = await fetch(`http://${host}:${port}/api/tags`, {
+      method: "GET",
+      signal: AbortSignal.timeout(2000),
+    });
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function autoDetectServer() {
+  State.serverCheckInProgress = true;
+  const now = Date.now();
+  State.serverCheckTimestamp = now;
+
+  const fallbackChain = [
+    { host: State.host, port: State.port, name: "configured" },
+    { host: "127.0.0.1", port: "11434", name: "127.0.0.1:11434" },
+    { host: "localhost", port: "11434", name: "localhost:11434" },
+  ];
+
+  if (State.lastKnownWorkingServer) {
+    const [host, port] = State.lastKnownWorkingServer.split(":");
+    fallbackChain.push({ host, port, name: `last known (${State.lastKnownWorkingServer})` });
+  }
+
+  for (const candidate of fallbackChain) {
+    if (await probeServer(candidate.host, candidate.port)) {
+      State.serverAvailable = true;
+      State.host = candidate.host;
+      State.port = candidate.port;
+      State.lastKnownWorkingServer = `${candidate.host}:${candidate.port}`;
+      saveState();
+      State.serverCheckInProgress = false;
+      return true;
+    }
+  }
+
+  State.serverAvailable = false;
+  State.serverCheckInProgress = false;
+  return false;
+}
+
+/* ───────── Network resilience: detect Wi-Fi changes ───────── */
+window.addEventListener("online", async () => {
+  console.log("[LATIF] Network online — re-checking Ollama server");
+  const found = await autoDetectServer();
+  if (found && window.fetchModels) {
+    window.fetchModels();
+  }
+});
+
+window.addEventListener("offline", () => {
+  console.log("[LATIF] Network offline — switching to cache mode");
+  State.serverAvailable = false;
+  if (window.setServerStatus) {
+    window.setServerStatus(false);
+  }
+});
 
 /* ───────── V3: premium feature gating stub ─────────
    No monetization business rules exist yet (pricing, what's gated, trial
