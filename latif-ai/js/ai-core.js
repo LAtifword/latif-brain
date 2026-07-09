@@ -220,6 +220,22 @@ function buildRequestBody(model, msgs, extra) {
   return body;
 }
 
+/* ───────── Network resilience: retry with exponential backoff ───────── */
+async function fetchWithRetry(url, options, maxRetries = 2) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, { ...options, signal: AbortSignal.timeout(5000) });
+      if (res.ok) return res;
+      if (res.status >= 500) throw new Error(`Server error: ${res.status}`);
+      return res;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+}
+
 /* ───────── V3: intelligent server auto-detection with fallback chain ───────── */
 async function probeServer(host, port) {
   try {

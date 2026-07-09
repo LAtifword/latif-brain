@@ -509,12 +509,12 @@ async function streamResponse(chat, voiceOpts) {
       }
     }
 
-    const res = await fetch(`${baseUrl()}/api/chat`, {
+    const res = await fetchWithRetry(`${baseUrl()}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: State.abortCtrl.signal,
       body: JSON.stringify(buildRequestBody(model, msgs)),
-    });
+    }, 2);
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
