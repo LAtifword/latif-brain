@@ -406,10 +406,17 @@ async function sendMessage(voiceOpts, overrideText) {
   clearAttachments();
   updateSendBtn();
 
-  // Index newly-attached files for retrieval (RAG) before asking the model —
-  // silently no-ops if RAG is off, backend isn't Ollama, or no embedding model is pulled.
+  // Index newly-attached files for retrieval (RAG) before asking the model
   if (fileAttachments.length) {
-    await Promise.all(fileAttachments.map((a) => ragIndexFile(chat, a.name, a.content)));
+    try {
+      await Promise.all(fileAttachments.map((a) =>
+        ragIndexFile(chat, a.name, a.content).catch(err => {
+          GlobalErrorLogger.warn("RAG.indexFile", `Failed to index ${a.name}`, { error: err.message });
+        })
+      ));
+    } catch (err) {
+      GlobalErrorLogger.warn("RAG.indexing", "File indexing encountered an error", { error: err.message });
+    }
   }
 
   // Queue message for processing (prevents concurrent generation race condition)
@@ -562,24 +569,30 @@ async function streamResponse(chat, voiceOpts) {
       if (acc) finalizeResponse(chat, acc, row, bubble, voiceOpts, true);
       else if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
     } else {
+      // Log error for debugging
+      GlobalErrorLogger.error("streamResponse", err, { model, baseUrl: baseUrl() }, false);
+
       // Try offline cache fallback
       if (!State.serverAvailable && msgs.length > 1) {
         const lastUserMsg = msgs[msgs.length - 1]?.content || "";
-        const cached = await OfflineCacheInstance.searchCache(lastUserMsg, model);
+        try {
+          const cached = await OfflineCacheInstance.searchCache(lastUserMsg, model);
+          if (cached && cached.length > 0) {
+            const cachedResponse = cached[0].responseText;
+            const timestamp = new Date(cached[0].timestamp).toLocaleTimeString();
 
-        if (cached && cached.length > 0) {
-          const cachedResponse = cached[0].responseText;
-          const timestamp = new Date(cached[0].timestamp).toLocaleTimeString();
+            const disclamer = `**[📴 OFFLINE MODE]** Showing cached response from ${timestamp} — this may not reflect current context or recent changes.\n\n`;
+            acc = disclamer + cachedResponse;
 
-          const disclamer = `**[📴 OFFLINE MODE]** Showing cached response from ${timestamp} — this may not reflect current context or recent changes.\n\n`;
-          acc = disclamer + cachedResponse;
-
-          bubble.setAttribute("dir", isArabic(acc) ? "rtl" : "ltr");
-          bubble.innerHTML = renderMarkdown(acc);
-          finalizeResponse(chat, acc, row, bubble, voiceOpts);
-          toast("Serving from offline cache");
-          if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone(acc);
-          return;
+            bubble.setAttribute("dir", isArabic(acc) ? "rtl" : "ltr");
+            bubble.innerHTML = renderMarkdown(acc);
+            finalizeResponse(chat, acc, row, bubble, voiceOpts);
+            toast("Serving from offline cache");
+            if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone(acc);
+            return;
+          }
+        } catch (cacheErr) {
+          GlobalErrorLogger.warn("streamResponse.cacheSearch", "Cache search failed", { error: cacheErr.message });
         }
       }
 

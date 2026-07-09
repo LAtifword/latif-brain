@@ -56,6 +56,9 @@ const State = {
   toolsEnabled: localStorage.getItem("latif_tools") === "true",
   jsonMode: localStorage.getItem("latif_jsonmode") === "true",
   memory: JSON.parse(localStorage.getItem("latif_memory") || "[]"),
+
+  /* ── V5: Debugging ── */
+  debugLogging: localStorage.getItem("latif_debug") === "true",
 };
 
 function baseUrl() {
@@ -111,7 +114,11 @@ async function ollamaEmbed(text) {
     if (!res.ok) return null;
     const data = await res.json();
     return data.embedding || null;
-  } catch (_) {
+  } catch (err) {
+    // Embedding errors are non-critical, but log them for debugging
+    if (typeof GlobalErrorLogger !== "undefined") {
+      GlobalErrorLogger.warn("embedding", "Failed to generate embedding", { error: err.message });
+    }
     return null;
   }
 }
@@ -244,7 +251,11 @@ async function probeServer(host, port) {
       signal: AbortSignal.timeout(2000),
     });
     return res.ok;
-  } catch (_) {
+  } catch (err) {
+    // Server probes fail often (expected), only log on debug
+    if (typeof GlobalErrorLogger !== "undefined" && State.debugLogging) {
+      GlobalErrorLogger.warn("probeServer", `Probe to ${host}:${port} failed`, { error: err.message });
+    }
     return false;
   }
 }
