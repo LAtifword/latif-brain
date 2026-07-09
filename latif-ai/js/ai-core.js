@@ -90,6 +90,15 @@ function saveState() {
 
 function saveChats() {
   localStorage.setItem("latif_chats", JSON.stringify(State.chats));
+  // Also save to IndexedDB asynchronously (non-blocking)
+  if (typeof GlobalDataLayer !== "undefined" && GlobalDataLayer.ready) {
+    for (const chatId in State.chats) {
+      const chat = State.chats[chatId];
+      GlobalDataLayer.saveChat(chat).catch(err => {
+        GlobalErrorLogger.warn("saveChats", `Failed to save chat ${chatId} to IndexedDB: ${err.message}`);
+      });
+    }
+  }
 }
 
 /* ───────── RAG (retrieval over attached files) ───────── */

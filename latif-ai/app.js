@@ -1335,8 +1335,75 @@ $("btnClearCache").addEventListener("click", async () => {
 updateCacheDisplay();
 setInterval(updateCacheDisplay, 60000);
 
+/* ───────── DATA LAYER MIGRATION & INITIALIZATION ───────── */
+async function initializeDataLayer() {
+  try {
+    // Initialize IndexedDB
+    await GlobalDataLayer.init();
+    console.log("✓ IndexedDB initialized");
+
+    // Check if we need to migrate from localStorage to IndexedDB
+    const existingChats = await GlobalDataLayer.getAllChats();
+    if (existingChats.length === 0 && Object.keys(State.chats).length > 0) {
+      console.log(`Migrating ${Object.keys(State.chats).length} chats from localStorage to IndexedDB...`);
+
+      // Migrate chats and their messages
+      for (const chatId in State.chats) {
+        const chat = State.chats[chatId];
+
+        // Validate chat before saving
+        const chatValidation = GlobalDataValidator.validateChat(chat);
+        if (!chatValidation.valid) {
+          console.warn(`Skipping invalid chat ${chatId}:`, chatValidation.errors);
+          continue;
+        }
+
+        // Save chat to IndexedDB
+        await GlobalDataLayer.saveChat(chatValidation.validated);
+
+        // Save associated messages
+        if (Array.isArray(chat.messages)) {
+          for (const msg of chat.messages) {
+            if (msg && msg.id) {
+              // Ensure message has required fields
+              const fullMsg = {
+                id: msg.id,
+                chatId: chatId,
+                role: msg.role || "user",
+                content: msg.content || "",
+                timestamp: msg.timestamp || Date.now(),
+                ...msg
+              };
+
+              const msgValidation = GlobalDataValidator.validateMessage(fullMsg);
+              if (msgValidation.valid) {
+                await GlobalDataLayer.saveMessage(msgValidation.validated);
+              }
+            }
+          }
+        }
+      }
+
+      console.log("✓ Migration from localStorage to IndexedDB complete");
+    } else if (existingChats.length > 0) {
+      console.log(`✓ Loaded ${existingChats.length} existing chats from IndexedDB`);
+      // Load chats from IndexedDB into State
+      State.chats = {};
+      for (const chat of existingChats) {
+        State.chats[chat.id] = chat;
+      }
+    }
+  } catch (err) {
+    GlobalErrorLogger.error("initializeDataLayer", err);
+    console.error("Data layer initialization failed:", err);
+  }
+}
+
 /* ───────── INIT ───────── */
 async function init() {
+  // Initialize data layer and migrate localStorage if needed
+  await initializeDataLayer();
+
   applyTheme();
   // Initialize search index for fast chat title lookups
   GlobalSearchIndex.rebuildIndex(State.chats);
