@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LATIF AI — Network Security Config for WebToApp
+
+  Android blocks plain http:// (cleartext) traffic by default for apps
+  targeting API 28+ (Android 9+), REGARDLESS of the destination being
+  127.0.0.1/localhost. This is the near-certain cause of "Ollama/whisper
+  are running perfectly but the app can't reach them" — curl from Termux
+  has no such restriction, but the WebView's network stack does.
+
+  Drop this file at: app/src/main/res/xml/network_security_config.xml
+  Then reference it from AndroidManifest.xml (see snippet below).
+-->
+<network-security-config>
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="false">127.0.0.1</domain>
+    <domain includeSubdomains="false">localhost</domain>
+    <!-- Uncomment if you ever test against another device on the same
+         Wi-Fi instead of the phone's own loopback: -->
+    <!-- <domain includeSubdomains="true">192.168.0.0/16</domain> -->
+  </domain-config>
+</network-security-config>

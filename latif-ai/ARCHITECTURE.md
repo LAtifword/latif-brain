@@ -154,6 +154,13 @@ latif-ai/
    remote LAN backend (or, later, a real internet-hosted API once you move
    off Termux) works by just changing the host/port fields — no code
    changes required.
+7. **Add `android/xml/network_security_config.xml`** (included in this
+   project) at `app/src/main/res/xml/network_security_config.xml` and
+   reference it via `android:networkSecurityConfig="@xml/network_security_config"`
+   on `<application>`. Without this, Android blocks the app's cleartext
+   `http://127.0.0.1:...` requests to Ollama/whisper by default (API 28+) —
+   see `TROUBLESHOOTING.md` if the app can't reach servers that work fine
+   from `curl` inside Termux.
 
 ## What changes when you go from "local testing" to "internet + offline"
 
