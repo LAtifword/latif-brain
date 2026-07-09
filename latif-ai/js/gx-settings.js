@@ -113,6 +113,21 @@ function wireCorner() {
   });
 }
 
+function wireDynamicColor() {
+  const toggle = $("dynColorToggle");
+  const swatch = $("dynColorSwatch");
+  if (!toggle || !window.LATIF_ANDROID) return;
+  toggle.checked = window.LATIF_ANDROID.isDynamicColorOn();
+  const hex = localStorage.getItem("latif_dynamic_color_hex");
+  if (swatch) swatch.style.background = hex || "linear-gradient(135deg,#C8A84B,#D4782A)";
+  toggle.addEventListener("change", (e) => {
+    window.LATIF_ANDROID.enableDynamicColor(e.target.checked);
+    toast(e.target.checked
+      ? (hex ? "Using system dynamic color" : "Enabled — waiting for the app shell to report a color")
+      : "Dynamic color off");
+  });
+}
+
 function wire() {
   const aT = $("gxAmbientToggle"), fT = $("gxFocusToggle");
   if (aT) aT.addEventListener("change", (e) => {
@@ -141,6 +156,7 @@ function wire() {
   });
 
   wireCorner();
+  wireDynamicColor();
 
   const modal = $("settingsModal");
   if (modal) {

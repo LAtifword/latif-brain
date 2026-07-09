@@ -37,7 +37,10 @@ void main() {
 
   float scan = 0.08 * sin(uv.y * u_resolution.y * 3.14159) ;
   float grain = (hash(uv * u_resolution.xy + u_time) - 0.5) * 0.06;
-  float vig = 1.0 - smoothstep(0.35, 0.9, length(uv - 0.5));
+  // Darken toward the EDGES, not the center — this is an overlay blended on
+  // top of real UI content, so whatever sits at screen-center (chat text,
+  // and especially the large-screen two-pane main content) must stay legible.
+  float vig = smoothstep(0.35, 0.9, length(uv - 0.5));
 
   float darken = (abs(scan) * 0.5 + abs(grain) * 0.5 + vig * 0.35) * u_intensity;
   gl_FragColor = vec4(vec3(0.0), clamp(darken, 0.0, 0.6));

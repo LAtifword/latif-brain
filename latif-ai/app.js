@@ -29,6 +29,15 @@ const State = {
   attachments: [],
   isGenerating: false,
   abortCtrl: null,
+
+  /* ── V2: backend, RAG, tools, memory ── */
+  backend: localStorage.getItem("latif_backend") || "ollama",       // "ollama" | "openai" (llama.cpp)
+  openaiUrl: localStorage.getItem("latif_openai_url") || "http://127.0.0.1:8080/v1",
+  embedModel: localStorage.getItem("latif_embed_model") || "nomic-embed-text",
+  ragEnabled: localStorage.getItem("latif_rag") !== "false",
+  toolsEnabled: localStorage.getItem("latif_tools") === "true",
+  jsonMode: localStorage.getItem("latif_jsonmode") === "true",
+  memory: JSON.parse(localStorage.getItem("latif_memory") || "[]"),
 };
 
 const PERF_PRESETS = {
@@ -68,9 +77,159 @@ function saveState() {
   localStorage.setItem("latif_autospeak", String(State.autoSpeak));
   localStorage.setItem("latif_stream", String(State.stream));
   localStorage.setItem("latif_theme", State.theme);
+  localStorage.setItem("latif_backend", State.backend);
+  localStorage.setItem("latif_openai_url", State.openaiUrl);
+  localStorage.setItem("latif_embed_model", State.embedModel);
+  localStorage.setItem("latif_rag", String(State.ragEnabled));
+  localStorage.setItem("latif_tools", String(State.toolsEnabled));
+  localStorage.setItem("latif_jsonmode", String(State.jsonMode));
+  localStorage.setItem("latif_memory", JSON.stringify(State.memory));
 }
 function saveChats() {
   localStorage.setItem("latif_chats", JSON.stringify(State.chats));
+}
+
+/* ───────── V2: RAG (retrieval over attached files) ───────── */
+function ragChunkText(text) {
+  const size = 700, overlap = 100, cap = 30;
+  const chunks = [];
+  let i = 0;
+  while (i < text.length && chunks.length < cap) {
+    chunks.push(text.slice(i, i + size));
+    i += size - overlap;
+  }
+  return chunks;
+}
+
+async function ollamaEmbed(text) {
+  try {
+    const res = await fetch(`${baseUrl()}/api/embeddings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: State.embedModel, prompt: text }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.embedding || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function cosineSim(a, b) {
+  if (!a || !b || a.length !== b.length) return -1;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  if (na === 0 || nb === 0) return -1;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
+async function ragIndexFile(chat, name, content) {
+  if (!State.ragEnabled || State.backend !== "ollama") return;
+  const chunks = ragChunkText(content);
+  chat.rag = chat.rag || [];
+  for (const c of chunks) {
+    const vec = await ollamaEmbed(c);
+    if (!vec) break; // embedding model unavailable — fall back to the raw file dump already in the message
+    chat.rag.push({ text: c, vec, source: name });
+  }
+  saveChats();
+}
+
+async function ragContextFor(chat, query) {
+  if (!chat.rag || !chat.rag.length) return null;
+  const qvec = await ollamaEmbed(query);
+  if (!qvec) return null;
+  const scored = chat.rag
+    .map((c) => ({ ...c, score: cosineSim(qvec, c.vec) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+  if (!scored.length || scored[0].score < 0) return null;
+  return scored.map((s) => `[from ${s.source}]\n${s.text}`).join("\n---\n");
+}
+
+/* ───────── V2: tool calling (Ollama backend only) ───────── */
+const TOOLS = [
+  { type: "function", function: { name: "get_current_time", description: "Get the current date and time on the user's device.", parameters: { type: "object", properties: {}, required: [] } } },
+  { type: "function", function: { name: "calculate", description: "Evaluate a basic arithmetic expression (+ - * / parentheses, no variables).", parameters: { type: "object", properties: { expression: { type: "string", description: "e.g. (12+8)*3/4" } }, required: ["expression"] } } },
+  { type: "function", function: { name: "system_stats", description: "Get live CPU/RAM/battery stats from the device's Termux monitor backend.", parameters: { type: "object", properties: {}, required: [] } } },
+  { type: "function", function: { name: "memory_search", description: "Search LATIF's stored long-term memory facts about the user.", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
+];
+
+function safeEvalExpr(expression) {
+  // Minimal recursive-descent arithmetic parser (+ - * / parentheses) — no eval().
+  const s = String(expression).replace(/\s+/g, "");
+  let i = 0;
+  const peek = () => s[i];
+  function number() {
+    const start = i;
+    while (i < s.length && /[0-9.]/.test(s[i])) i++;
+    if (start === i) throw new Error("bad expression");
+    return parseFloat(s.slice(start, i));
+  }
+  function factor() {
+    if (peek() === "(") { i++; const v = expr(); if (peek() !== ")") throw new Error("bad expression"); i++; return v; }
+    if (peek() === "-") { i++; return -factor(); }
+    return number();
+  }
+  function term() {
+    let v = factor();
+    while (peek() === "*" || peek() === "/") { const op = s[i++]; const r = factor(); v = op === "*" ? v * r : v / r; }
+    return v;
+  }
+  function expr() {
+    let v = term();
+    while (peek() === "+" || peek() === "-") { const op = s[i++]; const r = term(); v = op === "+" ? v + r : v - r; }
+    return v;
+  }
+  const result = expr();
+  if (i !== s.length) throw new Error("bad expression");
+  return result;
+}
+
+async function executeTool(name, args) {
+  try {
+    switch (name) {
+      case "get_current_time": return new Date().toString();
+      case "calculate": return String(safeEvalExpr(args.expression || ""));
+      case "system_stats": {
+        const url = localStorage.getItem("latif_monitor_url") || "http://127.0.0.1:8000";
+        const res = await fetch(url.replace(/\/$/, "") + "/stats");
+        return JSON.stringify(await res.json());
+      }
+      case "memory_search": {
+        const q = (args.query || "").toLowerCase();
+        const hits = (State.memory || []).filter((m) => m.toLowerCase().includes(q));
+        return hits.length ? hits.join("; ") : "No matching memory found.";
+      }
+      default: return "Unknown tool: " + name;
+    }
+  } catch (e) {
+    return "Tool error: " + e.message;
+  }
+}
+
+/* ───────── V2: backend abstraction (Ollama / OpenAI-compatible llama.cpp) ───────── */
+function getEndpoint() {
+  if (State.backend === "openai") {
+    return { url: `${State.openaiUrl.replace(/\/$/, "")}/chat/completions`, isOpenAI: true };
+  }
+  return { url: `${baseUrl()}/api/chat`, isOpenAI: false };
+}
+
+function buildRequestBody(model, msgs, extra) {
+  if (State.backend === "openai") {
+    const body = { model, messages: msgs, stream: State.stream, temperature: State.temperature, top_p: State.topP, max_tokens: State.numPredict };
+    if (State.jsonMode) body.response_format = { type: "json_object" };
+    return body;
+  }
+  const body = {
+    model, messages: msgs, stream: State.stream, keep_alive: State.keepAlive,
+    options: { temperature: State.temperature, top_p: State.topP, num_ctx: State.numCtx, num_predict: State.numPredict },
+  };
+  if (State.jsonMode) body.format = "json";
+  if (extra) Object.assign(body, extra);
+  return body;
 }
 
 /* ───────── DOM REFS ───────── */
@@ -392,20 +551,29 @@ function populateModelLists() {
   }
   list.innerHTML = "";
   select.innerHTML = "";
+  const chat = State.activeChat ? State.chats[State.activeChat] : null;
+  const pinEl = $("modelPinChat");
+  const activeModel = (pinEl && pinEl.checked && chat && chat.model) || State.model;
   State.models.forEach((m) => {
     const sizeGB = (m.size / 1e9).toFixed(1);
     const item = document.createElement("button");
-    item.className = "dd-model-item" + (m.name === State.model ? " active" : "");
+    item.className = "dd-model-item" + (m.name === activeModel ? " active" : "");
     item.innerHTML = `<div class="dd-model-icon">${m.name[0].toUpperCase()}</div>
       <div class="dd-model-meta"><div class="dd-model-name">${m.name}</div><div class="dd-model-size">${sizeGB} GB</div></div>
-      ${m.name === State.model ? '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}`;
+      ${m.name === activeModel ? '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}`;
     item.addEventListener("click", () => {
-      State.model = m.name;
-      saveState();
+      if (pinEl && pinEl.checked && chat) {
+        chat.model = m.name;
+        saveChats();
+        toast(`${m.name} pinned to this chat`);
+      } else {
+        State.model = m.name;
+        saveState();
+        toast(`Switched to ${m.name}`);
+      }
       updateModelLabel();
       populateModelLists();
       closeDropdowns();
-      toast(`Switched to ${m.name}`);
     });
     list.appendChild(item);
 
@@ -418,7 +586,9 @@ function populateModelLists() {
 }
 
 function updateModelLabel() {
-  $("currentModelLabel").textContent = State.model ? State.model.split(":")[0] : "no model";
+  const chat = State.activeChat ? State.chats[State.activeChat] : null;
+  const shown = (chat && chat.model) || State.model;
+  $("currentModelLabel").textContent = shown ? shown.split(":")[0] + (chat && chat.model ? " 📌" : "") : "no model";
 }
 
 /* ───────── SEND MESSAGE / STREAM ───────── */
@@ -430,13 +600,13 @@ async function sendMessage(voiceOpts, overrideText) {
 
   const chat = getChat();
   const images = State.attachments.filter((a) => a.type === "image").map((a) => a.base64);
-  const fileText = State.attachments
-    .filter((a) => a.type === "file")
+  const fileAttachments = State.attachments.filter((a) => a.type === "file");
+  const fileText = fileAttachments
     .map((a) => `\n\n[Attached file: ${a.name}]\n${a.content}`)
     .join("");
 
   const fullText = text + fileText;
-  chat.messages.push({ role: "user", content: fullText, images: images.length ? images : undefined });
+  chat.messages.push({ role: "user", content: fullText, images: images.length ? images : undefined, queryText: text });
   if (chat.title === "New chat") {
     chat.title = text.slice(0, 48) || "Image conversation";
   }
@@ -447,6 +617,12 @@ async function sendMessage(voiceOpts, overrideText) {
   if (overrideText === undefined) { promptInput.value = ""; autoGrow(); }
   clearAttachments();
   updateSendBtn();
+
+  // Index newly-attached files for retrieval (RAG) before asking the model —
+  // silently no-ops if RAG is off, backend isn't Ollama, or no embedding model is pulled.
+  if (fileAttachments.length) {
+    await Promise.all(fileAttachments.map((a) => ragIndexFile(chat, a.name, a.content)));
+  }
 
   await streamResponse(chat, voiceOpts);
 }
@@ -471,13 +647,30 @@ async function streamResponse(chat, voiceOpts) {
   const { row, bubble } = appendMessageDOM("ai", "", null, true);
   bubble.innerHTML = `<div class="typing-row"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
 
-  const ollamaMsgs = [{ role: "system", content: State.systemPrompt }];
+  let systemContent = State.systemPrompt;
+  if (State.memory && State.memory.length) {
+    systemContent += "\n\nLong-term memory about the user (use only if relevant):\n- " + State.memory.join("\n- ");
+  }
+  const msgs = [{ role: "system", content: systemContent }];
   chat.messages.forEach((m) => {
     const entry = { role: m.role === "user" ? "user" : "assistant", content: m.content };
     if (m.images && m.images.length) entry.images = m.images;
-    ollamaMsgs.push(entry);
+    msgs.push(entry);
   });
 
+  // RAG: swap the latest user turn's content for a retrieval-augmented version.
+  if (State.ragEnabled && chat.rag && chat.rag.length) {
+    let lastUserIdx = -1;
+    for (let i = msgs.length - 1; i >= 0; i--) { if (msgs[i].role === "user") { lastUserIdx = i; break; } }
+    if (lastUserIdx >= 0) {
+      const lastChatMsg = [...chat.messages].reverse().find((m) => m.role === "user");
+      const query = (lastChatMsg && lastChatMsg.queryText) || msgs[lastUserIdx].content;
+      const ctx = await ragContextFor(chat, query);
+      if (ctx) msgs[lastUserIdx] = { ...msgs[lastUserIdx], content: `${query}\n\n[Relevant context retrieved from attached files]\n${ctx}` };
+    }
+  }
+
+  const model = chat.model || State.model;
   State.abortCtrl = new AbortController();
   let acc = "";
   let firstChunk = true;
@@ -493,22 +686,36 @@ async function streamResponse(chat, voiceOpts) {
   }
 
   try {
-    const res = await fetch(`${baseUrl()}/api/chat`, {
+    // Tool calling: opt-in, Ollama backend only, one non-streaming pre-check round.
+    if (State.backend === "ollama" && State.toolsEnabled) {
+      const precheck = await fetch(`${baseUrl()}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: State.abortCtrl.signal,
+        body: JSON.stringify(buildRequestBody(model, msgs, { stream: false, tools: TOOLS })),
+      });
+      if (precheck.ok) {
+        const data = await precheck.json();
+        const toolCalls = data.message && data.message.tool_calls;
+        if (toolCalls && toolCalls.length) {
+          msgs.push({ role: "assistant", content: data.message.content || "", tool_calls: toolCalls });
+          for (const call of toolCalls) {
+            const fn = call.function || {};
+            let args = {};
+            try { args = typeof fn.arguments === "string" ? JSON.parse(fn.arguments) : (fn.arguments || {}); } catch (_) {}
+            const result = await executeTool(fn.name, args);
+            msgs.push({ role: "tool", content: String(result) });
+          }
+        }
+      }
+    }
+
+    const endpoint = getEndpoint();
+    const res = await fetch(endpoint.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: State.abortCtrl.signal,
-      body: JSON.stringify({
-        model: State.model,
-        messages: ollamaMsgs,
-        stream: State.stream,
-        keep_alive: State.keepAlive,
-        options: {
-          temperature: State.temperature,
-          top_p: State.topP,
-          num_ctx: State.numCtx,
-          num_predict: State.numPredict,
-        },
-      }),
+      body: JSON.stringify(buildRequestBody(model, msgs)),
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -525,23 +732,38 @@ async function streamResponse(chat, voiceOpts) {
         buf = lines.pop();
         for (const line of lines) {
           if (!line.trim()) continue;
-          try {
-            const json = JSON.parse(line);
-            if (json.message && json.message.content) {
-              if (firstChunk) { bubble.innerHTML = ""; firstChunk = false; }
-              acc += json.message.content;
-              scheduleRender();
-            }
-            if (json.done) {
-              finalizeResponse(chat, acc, row, bubble, voiceOpts);
-            }
-          } catch (_) { /* partial json, ignore */ }
+          if (endpoint.isOpenAI) {
+            if (!line.startsWith("data:")) continue;
+            const payload = line.slice(5).trim();
+            if (payload === "[DONE]") { finalizeResponse(chat, acc, row, bubble, voiceOpts); continue; }
+            try {
+              const json = JSON.parse(payload);
+              const delta = json.choices && json.choices[0] && json.choices[0].delta;
+              if (delta && delta.content) {
+                if (firstChunk) { bubble.innerHTML = ""; firstChunk = false; }
+                acc += delta.content;
+                scheduleRender();
+              }
+            } catch (_) { /* partial SSE frame, ignore */ }
+          } else {
+            try {
+              const json = JSON.parse(line);
+              if (json.message && json.message.content) {
+                if (firstChunk) { bubble.innerHTML = ""; firstChunk = false; }
+                acc += json.message.content;
+                scheduleRender();
+              }
+              if (json.done) {
+                finalizeResponse(chat, acc, row, bubble, voiceOpts);
+              }
+            } catch (_) { /* partial json, ignore */ }
+          }
         }
       }
       if (acc) finalizeResponse(chat, acc, row, bubble, voiceOpts, true);
     } else {
       const data = await res.json();
-      acc = data.message?.content || "(no response)";
+      acc = endpoint.isOpenAI ? (data.choices?.[0]?.message?.content || "(no response)") : (data.message?.content || "(no response)");
       bubble.setAttribute("dir", isArabic(acc) ? "rtl" : "ltr");
       bubble.innerHTML = renderMarkdown(acc);
       finalizeResponse(chat, acc, row, bubble, voiceOpts);
@@ -552,7 +774,8 @@ async function streamResponse(chat, voiceOpts) {
       if (acc) finalizeResponse(chat, acc, row, bubble, voiceOpts, true);
       else if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
     } else {
-      bubble.innerHTML = `<span style="color:var(--red)">⚠ Connection error: ${escapeHtml(err.message)}<br/><br/>Make sure Ollama is running and reachable at <code>${baseUrl()}</code>.</span>`;
+      const where = State.backend === "openai" ? State.openaiUrl : baseUrl();
+      bubble.innerHTML = `<span style="color:var(--red)">⚠ Connection error: ${escapeHtml(err.message)}<br/><br/>Make sure your ${State.backend === "openai" ? "llama.cpp" : "Ollama"} server is running and reachable at <code>${escapeHtml(where)}</code>.</span>`;
       toast("Failed to reach local model server");
       if (voiceOpts && voiceOpts.onDone) voiceOpts.onDone("");
     }
@@ -912,6 +1135,7 @@ document.addEventListener("click", (e) => {
   }
 });
 $("btnRefreshModels").addEventListener("click", () => { fetchModels(); toast("Refreshed model list"); });
+$("modelPinChat").addEventListener("change", populateModelLists);
 
 /* message menu actions */
 $("actDelete").addEventListener("click", () => {
@@ -993,6 +1217,15 @@ function openSettings() {
   document.querySelectorAll("#perfSeg .seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.perf === State.perfMode));
   $("perfHint").textContent = (PERF_PRESETS[State.perfMode] || PERF_PRESETS.balanced).hint;
   document.querySelectorAll("#voiceLangSeg .seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.lang === State.voiceLang));
+  document.querySelectorAll("#backendSeg .seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.backend === State.backend));
+  $("openaiUrlRow").style.display = State.backend === "openai" ? "flex" : "none";
+  $("openaiUrl").value = State.openaiUrl;
+  $("ragToggle").checked = State.ragEnabled;
+  $("embedModel").value = State.embedModel;
+  $("embedModelRow").style.display = State.ragEnabled ? "block" : "none";
+  $("toolsToggle").checked = State.toolsEnabled;
+  $("jsonModeToggle").checked = State.jsonMode;
+  renderMemoryList();
   applyTheme();
   populateModelLists();
   settingsModal.classList.add("open");
@@ -1040,6 +1273,55 @@ $("predictSlider").addEventListener("input", (e) => { State.numPredict = parseIn
 $("keepAliveSelect").addEventListener("change", (e) => { State.keepAlive = e.target.value; saveState(); });
 $("streamToggle").addEventListener("change", (e) => { State.stream = e.target.checked; saveState(); });
 $("autoSpeakToggle").addEventListener("change", (e) => { State.autoSpeak = e.target.checked; saveState(); });
+
+/* ───────── V2: AI Backend / RAG / Tools / Memory settings wiring ───────── */
+document.querySelectorAll("#backendSeg .seg-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    State.backend = btn.dataset.backend;
+    saveState();
+    document.querySelectorAll("#backendSeg .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    $("openaiUrlRow").style.display = State.backend === "openai" ? "flex" : "none";
+    toast(`Backend: ${State.backend === "openai" ? "llama.cpp (OpenAI API)" : "Ollama"}`);
+  });
+});
+$("openaiUrl").addEventListener("change", (e) => { State.openaiUrl = e.target.value.trim() || State.openaiUrl; saveState(); });
+$("ragToggle").addEventListener("change", (e) => {
+  State.ragEnabled = e.target.checked;
+  saveState();
+  $("embedModelRow").style.display = State.ragEnabled ? "block" : "none";
+});
+$("embedModel").addEventListener("change", (e) => { State.embedModel = e.target.value.trim() || "nomic-embed-text"; saveState(); });
+$("toolsToggle").addEventListener("change", (e) => { State.toolsEnabled = e.target.checked; saveState(); toast(e.target.checked ? "Tool calling on" : "Tool calling off"); });
+$("jsonModeToggle").addEventListener("change", (e) => { State.jsonMode = e.target.checked; saveState(); });
+
+function renderMemoryList() {
+  const list = $("memoryList");
+  if (!State.memory.length) {
+    list.innerHTML = `<div class="gxd-memory-empty">No memories yet.</div>`;
+    return;
+  }
+  list.innerHTML = State.memory.map((m, i) =>
+    `<div class="gxd-memory-item"><span>${escapeHtml(m)}</span><button data-idx="${i}">✕</button></div>`
+  ).join("");
+  list.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      State.memory.splice(parseInt(btn.dataset.idx, 10), 1);
+      saveState();
+      renderMemoryList();
+    });
+  });
+}
+function addMemory() {
+  const input = $("memoryInput");
+  const val = input.value.trim();
+  if (!val) return;
+  State.memory.push(val);
+  saveState();
+  input.value = "";
+  renderMemoryList();
+}
+$("btnMemoryAdd").addEventListener("click", addMemory);
+$("memoryInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addMemory(); } });
 
 document.querySelectorAll("#perfSeg .seg-btn").forEach((btn) => {
   btn.addEventListener("click", () => {

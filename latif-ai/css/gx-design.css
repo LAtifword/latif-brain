@@ -109,3 +109,46 @@ html.gxd-fx-off #gxdScanlineOverlay { opacity: 0 !important; }
 .gxd-monitor-offline { text-align: center; padding: 10px 0; }
 
 /* ─── Shader FX intensity segmented control reuses .seg-control from style.css ─── */
+
+/* ─── V2: model dropdown pin-to-chat row ─── */
+.dd-pin-row {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px 10px;
+  font-size: 12px; color: var(--text-dim, var(--gxd-text-dim));
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.08)); margin-bottom: 4px;
+}
+.dd-pin-row input { accent-color: var(--gold, var(--gxd-accent)); }
+
+/* ─── V2: memory editor list ─── */
+.gxd-memory-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.gxd-memory-item {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px;
+  background: var(--surface3, var(--gxd-bg-elev)); border: 1px solid var(--border, var(--gxd-border));
+  font-size: 13px; color: var(--text, var(--gxd-text));
+}
+.gxd-memory-item span { flex: 1; word-break: break-word; }
+.gxd-memory-item button {
+  border: none; background: transparent; color: var(--text-faint, #80868b); font-size: 16px; line-height: 1;
+  padding: 2px 6px; flex-shrink: 0;
+}
+.gxd-memory-empty { font-size: 12px; color: var(--text-faint, #80868b); padding: 4px 2px 10px; }
+.gxd-memory-add { display: flex; gap: 8px; }
+.gxd-memory-add input { flex: 1; }
+
+/* ─── V2: large-screen / foldable / tablet two-pane shell (Android 16) ─── */
+@media (min-width: 840px) {
+  html.gxd-large-screen .drawer {
+    transform: translateX(0) !important;
+    position: fixed; box-shadow: none; border-right: 1px solid var(--border, var(--gxd-border));
+  }
+  html.gxd-large-screen .drawer-backdrop { display: none !important; }
+  html.gxd-large-screen #btnMenu { visibility: hidden; }
+  html.gxd-large-screen .topbar,
+  html.gxd-large-screen .chat-scroll,
+  html.gxd-large-screen .input-stage {
+    margin-left: min(340px, 86%);
+  }
+  html.gxd-large-screen .modal { left: min(340px, 86%); }
+}
+
+/* ─── V2: dynamic color toggle row (Settings) ─── */
+.gxd-dyncolor-swatch { width: 22px; height: 22px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-left: 8px; border: 1px solid rgba(255,255,255,0.2); }
