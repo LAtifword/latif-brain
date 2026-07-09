@@ -1,14 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#E8CC7A"/>
-      <stop offset="0.5" stop-color="#C8A84B"/>
-      <stop offset="1" stop-color="#D4782A"/>
+    <!-- deep GX violet base -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2d2640"/>
+      <stop offset="0.55" stop-color="#1c1729"/>
+      <stop offset="1" stop-color="#0e0a16"/>
     </linearGradient>
+    <!-- signature GX crimson → cyan accent -->
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff4d78"/>
+      <stop offset="0.55" stop-color="#fa1e4e"/>
+      <stop offset="1" stop-color="#00d4aa"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.65">
+      <stop offset="0" stop-color="#fa1e4e" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#fa1e4e" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="cut">
+      <polygon points="64,0 512,0 512,448 448,512 0,512 0,64"/>
+    </clipPath>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="#000000"/>
-  <g fill="none" stroke="url(#g)" stroke-width="26" stroke-linejoin="round">
-    <path d="M256 96 L360 256 L256 416 L152 256 Z"/>
+
+  <g clip-path="url(#cut)">
+    <rect width="512" height="512" fill="url(#bg)"/>
+    <rect width="512" height="512" fill="url(#glow)"/>
+    <!-- angular corner-cut border, GX signature shape -->
+    <polygon points="64,6 506,6 506,445.5 445.5,506 6,506 6,64"
+      fill="none" stroke="url(#accent)" stroke-width="6" opacity="0.55"/>
   </g>
-  <circle cx="256" cy="256" r="34" fill="url(#g)"/>
+
+  <!-- "L" monogram fused with the LATIF spark mark -->
+  <g filter="url(#softGlow)">
+    <rect x="178" y="146" width="62" height="228" rx="18" fill="url(#accent)"/>
+    <rect x="178" y="310" width="158" height="62" rx="18" fill="url(#accent)"/>
+    <!-- spark accent (⟡), echoes the in-app brand mark -->
+    <g transform="translate(300,150) rotate(45)">
+      <rect x="-30" y="-30" width="60" height="60" rx="12" fill="url(#accent)"/>
+    </g>
+  </g>
 </svg>
