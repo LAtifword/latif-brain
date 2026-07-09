@@ -138,6 +138,7 @@ function createChat() {
   };
   State.activeChat = id;
   saveChats();
+  GlobalSearchIndex.indexChat(id, "New chat");
   return id;
 }
 function getChat() {
@@ -149,6 +150,7 @@ function getChat() {
 function deleteChat(id) {
   delete State.chats[id];
   saveChats();
+  GlobalSearchIndex.unindexChat(id);
   if (State.activeChat === id) {
     State.activeChat = null;
     renderWelcome();
@@ -283,9 +285,11 @@ let historyPressTimer = null;
 function renderHistory(filter = "") {
   const list = $("historyList");
   list.innerHTML = "";
+
+  // Use search index for fast filtering (O(1) + O(m) instead of O(n))
+  const searchResults = GlobalSearchIndex.search(filter);
   const chats = Object.values(State.chats)
-    .filter((c) => c.messages.length > 0)
-    .filter((c) => !filter || c.title.toLowerCase().includes(filter.toLowerCase()))
+    .filter((c) => c.messages.length > 0 && searchResults.has(c.id))
     .sort((a, b) => (b.pinned - a.pinned) || (b.createdAt - a.createdAt));
 
   if (chats.length === 0) {
@@ -392,6 +396,7 @@ async function sendMessage(voiceOpts, overrideText) {
   chat.messages.push({ role: "user", content: fullText, images: images.length ? images : undefined, queryText: text });
   if (chat.title === "New chat") {
     chat.title = text.slice(0, 48) || "Image conversation";
+    GlobalSearchIndex.indexChat(chat.id, chat.title);
   }
   saveChats();
   renderHistory();
@@ -1026,7 +1031,12 @@ $("actRename").addEventListener("click", () => {
   const c = State.chats[msgMenuTargetId];
   if (c) {
     const name = prompt("Rename conversation", c.title);
-    if (name && name.trim()) { c.title = name.trim(); saveChats(); renderHistory(); }
+    if (name && name.trim()) {
+      c.title = name.trim();
+      saveChats();
+      GlobalSearchIndex.indexChat(msgMenuTargetId, name.trim());
+      renderHistory();
+    }
   }
   closeDropdowns();
 });
@@ -1300,6 +1310,8 @@ setInterval(updateCacheDisplay, 60000);
 /* ───────── INIT ───────── */
 async function init() {
   applyTheme();
+  // Initialize search index for fast chat title lookups
+  GlobalSearchIndex.rebuildIndex(State.chats);
   renderHistory();
   if (State.activeChat && State.chats[State.activeChat] && State.chats[State.activeChat].messages.length) {
     renderChat(State.activeChat);
