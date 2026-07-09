@@ -1,0 +1,45 @@
+{
+  "manifest_version": 1,
+  "name": "Synthwave",
+  "version": "1.0",
+  "description": "Retro sunset — magenta & electric orange over a neon horizon grid.",
+  "author": "Latif",
+  "theme": {
+    "primary_color": "#FF2D95",
+    "secondary_color": "#241634",
+    "accent_color": "#FFB347",
+    "text_color": "#F5E9FF",
+    "text_secondary": "#B39CD0",
+    "background_color": "#0D0221",
+    "surface_color": "rgba(36, 22, 52, 0.55)",
+    "border_color": "rgba(255, 45, 149, 0.16)",
+    "glow_color": "rgba(255, 45, 149, 0.35)"
+  },
+  "wallpaper": {
+    "type": "live",
+    "source": "wallpaper.js",
+    "interactive": true
+  },
+  "sounds": {
+    "ambient": "sounds/ambient.mp3",
+    "click": "sounds/click.mp3",
+    "hover": "sounds/hover.mp3",
+    "typing": "sounds/typing.mp3",
+    "notification": "sounds/notify.mp3"
+  },
+  "shaders": {
+    "midnight": "shaders/sunset.frag",
+    "intensity": 0.85
+  },
+  "typography": {
+    "font_family": "'Segoe UI', system-ui, sans-serif",
+    "font_size_scale": 1.0
+  },
+  "effects": {
+    "glass_blur": "14px",
+    "glass_opacity": 0.55,
+    "vignette": 0.5,
+    "glow_intensity": 0.7,
+    "animation_speed": 1.0
+  }
+}

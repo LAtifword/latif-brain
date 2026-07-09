@@ -1,0 +1,45 @@
+{
+  "manifest_version": 1,
+  "name": "Underwave",
+  "version": "1.0",
+  "description": "Opera GX Underwave aesthetic — deep midnight with hot-pink & cyan glow.",
+  "author": "Latif",
+  "theme": {
+    "primary_color": "#FA1E4E",
+    "secondary_color": "#1E1E2E",
+    "accent_color": "#00D4AA",
+    "text_color": "#EAEAEA",
+    "text_secondary": "#8B8B9A",
+    "background_color": "#0A0A0F",
+    "surface_color": "rgba(30, 30, 46, 0.6)",
+    "border_color": "rgba(255, 255, 255, 0.08)",
+    "glow_color": "rgba(250, 30, 78, 0.3)"
+  },
+  "wallpaper": {
+    "type": "live",
+    "source": "wallpaper.js",
+    "interactive": true
+  },
+  "sounds": {
+    "ambient": "sounds/ambient.mp3",
+    "click": "sounds/click.mp3",
+    "hover": "sounds/hover.mp3",
+    "typing": "sounds/typing.mp3",
+    "notification": "sounds/notify.mp3"
+  },
+  "shaders": {
+    "midnight": "shaders/midnight.frag",
+    "intensity": 0.7
+  },
+  "typography": {
+    "font_family": "'Segoe UI', system-ui, sans-serif",
+    "font_size_scale": 1.0
+  },
+  "effects": {
+    "glass_blur": "12px",
+    "glass_opacity": 0.6,
+    "vignette": 0.4,
+    "glow_intensity": 0.5,
+    "animation_speed": 1.0
+  }
+}

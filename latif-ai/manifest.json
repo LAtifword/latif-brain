@@ -1,0 +1,13 @@
+{
+  "name": "LATIF AI \u2014 \u0644\u0637\u064a\u0641 \u0644\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a",
+  "short_name": "LATIF",
+  "description": "100% on-device AI assistant running locally via Ollama. No cloud, no API keys.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
