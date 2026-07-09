@@ -1,6 +1,7 @@
 {
   "name": "LATIF AI — لطيف للذكاء الاصطناعي",
   "short_name": "LATIF",
+  "version": "3.0.0",
   "description": "100% on-device AI assistant running locally via Ollama. No cloud, no API keys.",
   "start_url": "./index.html",
   "scope": "./",

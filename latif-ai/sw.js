@@ -1,11 +1,12 @@
 /* LATIF AI — service worker: cache-first app shell, network-passthrough
    for local APIs (Ollama / stats / whisper) — never cache model output. */
-const CACHE = "latif-ai-shell-v2";
+const CACHE = "latif-ai-shell-v3";
 const SHELL = [
   "./", "./index.html", "./style.css", "./app.js", "./manifest.json", "./icon.svg",
   "./css/gx-design.css", "./css/gx-mods.css",
-  "./js/mod-engine.js", "./js/gx-settings.js", "./js/audio-engine.js",
+  "./js/ai-core.js", "./js/mod-engine.js", "./js/gx-settings.js", "./js/audio-engine.js",
   "./js/fx-shader.js", "./js/stats-gauges.js", "./js/voice-backend.js", "./js/android16.js",
+  "./js/calendar.js",
 ];
 
 const LOCAL_API_PORTS = ["11434", "8000", "8001"]; // ollama, stats, whisper

@@ -164,3 +164,38 @@ dependency at all (fully offline). The three things that talk to a backend
 voice (`voice-backend.js`) — all read their target URL from a Settings
 field persisted to `localStorage`. Swapping Termux's `127.0.0.1` for a real
 hosted endpoint later is a Settings change, not a rebuild.
+
+---
+
+# LATIF GX V3 — modular architecture, calendar, multimodal
+
+See `CHANGELOG.md` for the full list. Two things worth expanding on here:
+
+## `js/ai-core.js` — the new data/AI layer
+
+`app.js` is a self-invoking IIFE, so its `State` object and helper
+functions were never reachable from other files. `js/ai-core.js` declares
+`State`, `saveState()`, `saveChats()`, `baseUrl()`, the RAG pipeline, tool
+calling, and backend abstraction as **top-level** (non-IIFE-wrapped)
+declarations in their own `<script>`, loaded before `app.js`. Classic
+`<script>` tags share one global lexical scope in a page, so `app.js`'s
+IIFE resolves `State` etc. via that outer scope exactly as if they were
+still declared inline — zero call-site changes, real file separation.
+`js/calendar.js` uses the same mechanism to read chat data, plus three
+explicit `window.*` exports at the bottom of `app.js` (`renderChat`,
+`closeDrawerGlobal`, `sendMessageFromReminder`) for the handful of things
+it needs to trigger back inside app.js's UI layer.
+
+## Calendar & Reminders — honest scope
+
+`js/calendar.js`'s month grid and scheduled prompts work well for what a
+web page can actually guarantee: reminders fire **while LATIF is open**
+(foreground or a backgrounded tab/PWA), via a `setInterval` check. A web
+page cannot wake itself once fully closed — there is no workaround for
+that at the JS layer. To make reminders fire even when the app is fully
+closed, the WebToApp native shell needs to own the schedule instead:
+`AlarmManager`/`WorkManager` sets a real OS alarm that either launches the
+Activity with a deep-link (`latif://reminder?id=...`) for `calendar.js` to
+pick up on load, or fires a native notification directly. This is future
+native-side work, not something fixable from the web layer — documented
+here so it isn't silently assumed to already work.

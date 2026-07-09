@@ -152,3 +152,23 @@ html.gxd-fx-off #gxdScanlineOverlay { opacity: 0 !important; }
 
 /* ─── V2: dynamic color toggle row (Settings) ─── */
 .gxd-dyncolor-swatch { width: 22px; height: 22px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-left: 8px; border: 1px solid rgba(255,255,255,0.2); }
+
+/* ─── V3: Calendar & Reminders ─── */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-month-label { font-weight: 700; font-size: 15px; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--text-faint); margin-bottom: 4px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-cell {
+  aspect-ratio: 1; border-radius: 10px; border: 1px solid transparent; background: var(--surface3);
+  color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; font-size: 12.5px; position: relative;
+}
+.cal-cell.empty { background: transparent; border: none; }
+.cal-cell.today { border-color: var(--gold); }
+.cal-cell.selected { background: var(--gold); color: #000; font-weight: 700; }
+.cal-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold2); }
+.cal-cell.selected .cal-dot { background: #000; }
+.cal-history-item { width: 100%; text-align: left; }
+
+.cal-reminder-item strong { color: var(--gold2); }
+

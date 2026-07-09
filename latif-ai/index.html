@@ -111,7 +111,7 @@
     </button>
   </div>
 </div>
-<input type="file" id="fileInput" accept="image/*,.txt,.md,.csv,.json,.pdf" multiple hidden />
+<input type="file" id="fileInput" accept="image/*,audio/*,.txt,.md,.csv,.json,.pdf" multiple hidden />
 
 <!-- ════════════ INPUT BAR ════════════ -->
 <div class="input-stage">
@@ -159,6 +159,10 @@
     <div class="gxd-corner-chips" id="cornerChips"></div>
   </div>
 
+  <button class="drawer-action" id="drawerCalendar">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Calendar &amp; Reminders
+  </button>
   <button class="drawer-action" id="drawerSettingsTop">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
     Connection &amp; Settings
@@ -421,8 +425,58 @@
     <div class="about-block">
       <div class="about-logo">⟡</div>
       <div class="about-name">LATIF AI</div>
-      <div class="about-sub">لطيف للذكاء الاصطناعي · v3.0 Local Edition</div>
+      <div class="about-sub">لطيف للذكاء الاصطناعي · LATIF GX V3</div>
       <div class="about-sub2">100% on-device inference via Ollama · Zero cloud dependency</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ CALENDAR & REMINDERS MODAL (V3) ════════════ -->
+<div class="modal-backdrop" id="calendarBackdrop"></div>
+<div class="modal" id="calendarModal">
+  <div class="modal-head">
+    <div class="modal-title">Calendar &amp; Reminders</div>
+    <button class="icon-btn" id="btnCloseCalendar">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="field-group">
+      <div class="cal-nav">
+        <button class="icon-btn small" id="calPrevMonth" aria-label="Previous month">
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="cal-month-label" id="calMonthLabel">Month</div>
+        <button class="icon-btn small" id="calNextMonth" aria-label="Next month">
+          <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="cal-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="cal-grid" id="calMonthGrid"></div>
+      <div class="field-hint">Dots mark days with conversations. Tap a day to filter history below.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" id="calHistoryTitle">Recent conversations</label>
+      <div class="gxd-memory-list" id="calHistoryList"></div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Scheduled Prompts</label>
+      <div class="gxd-memory-list" id="calReminderList"></div>
+      <input id="calReminderPrompt" class="field-input" placeholder="e.g. Give me a daily briefing" style="margin-bottom:8px;" />
+      <div class="field-row" style="margin-bottom:8px;">
+        <input id="calReminderTime" type="time" class="field-input" value="09:00" />
+        <select id="calReminderRepeat" class="field-select" style="flex:0 0 120px;">
+          <option value="once">Once</option>
+          <option value="daily" selected>Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+      <button class="field-btn" id="btnAddReminder">Schedule</button>
+      <div class="field-hint">Fires while LATIF is open (foreground or background tab) — a fully-closed app can't wake itself from the web layer alone. See ARCHITECTURE.md for the native alarm hook that completes this in the packaged app.</div>
     </div>
   </div>
 </div>
@@ -430,6 +484,7 @@
 <!-- ════════════ TOAST ════════════ -->
 <div class="toast" id="toast"></div>
 
+<script src="js/ai-core.js"></script>
 <script src="js/audio-engine.js"></script>
 <script src="js/fx-shader.js"></script>
 <script src="js/mod-engine.js"></script>
@@ -438,6 +493,7 @@
 <script src="js/stats-gauges.js"></script>
 <script src="js/voice-backend.js"></script>
 <script src="js/android16.js"></script>
+<script src="js/calendar.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

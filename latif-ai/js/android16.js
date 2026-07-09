@@ -30,7 +30,7 @@
 "use strict";
 
 /* ───────── 1) Predictive back gesture (coalesced single-depth model) ───────── */
-const OVERLAY_IDS = ["drawer", "settingsModal", "attachSheet", "voiceOverlay", "modelDropdown", "msgMenu"];
+const OVERLAY_IDS = ["drawer", "settingsModal", "attachSheet", "voiceOverlay", "modelDropdown", "msgMenu", "calendarModal"];
 let anyOpenBefore = false;
 let activeOverlayId = null;   // most recently opened overlay still open — the one back() targets
 let pushedForOverlay = false; // true once we've pushed the single "overlay open" history entry
