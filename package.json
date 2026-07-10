@@ -11,6 +11,7 @@
     "start": "node src/main.js",
     "dev": "NODE_ENV=development node src/main.js",
     "build": "node tools/build.js",
+    "package": "node tools/package.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
     "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
