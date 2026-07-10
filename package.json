@@ -8,8 +8,8 @@
     "latif-cli": "tools/cli/latif-cli.js"
   },
   "scripts": {
-    "start": "node tools/dev-server.js",
-    "dev": "NODE_ENV=development node tools/dev-server.js",
+    "start": "node src/main.js",
+    "dev": "NODE_ENV=development node src/main.js",
     "build": "node tools/build.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
@@ -62,7 +62,9 @@
     "uuid": "^9.0.0",
     "pino": "^8.0.0",
     "joi": "^17.0.0",
-    "axios": "^1.4.0"
+    "axios": "^1.4.0",
+    "sqlite3": "^5.1.6",
+    "bull": "^4.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
