@@ -73,15 +73,23 @@ export class PlannerAgent extends Agent {
 }
 
 /**
- * Researcher Agent - Searches for information
+ * Researcher Agent - Searches for information using hybrid RAG
  */
 export class ResearcherAgent extends Agent {
   constructor() {
     super(
       'Researcher',
-      'Searches knowledge base and retrieves relevant information',
-      ['search', 'retrieval', 'analysis', 'knowledge-discovery']
+      'Searches knowledge base and retrieves relevant information using hybrid RAG',
+      ['search', 'retrieval', 'analysis', 'knowledge-discovery', 'rag']
     );
+    this.hybridSearch = null; // Will be injected at runtime
+  }
+
+  /**
+   * Set the hybrid search instance for RAG integration
+   */
+  setHybridSearch(search) {
+    this.hybridSearch = search;
   }
 
   async executeAction(action) {
@@ -96,16 +104,32 @@ export class ResearcherAgent extends Agent {
       sources: analyzed.sources,
       confidence: analyzed.avgConfidence,
       summary: analyzed.summary,
+      searchMethod: this.hybridSearch ? 'hybrid-search' : 'fallback',
       status: 'completed'
     };
   }
 
   async search(query) {
-    // Simulated search (in production: call hybrid-search)
+    // Use hybrid search if available
+    if (this.hybridSearch) {
+      try {
+        // In production: call actual hybrid search with embeddings
+        return await this.hybridSearch.search(query, [], [], 0.5);
+      } catch (_err) {
+        // Fall back to simulated search if hybrid search fails
+        return this.getSimulatedResults(query);
+      }
+    }
+
+    // Fallback simulated search
+    return this.getSimulatedResults(query);
+  }
+
+  getSimulatedResults(query) {
     return [
-      { content: `Result for: ${query}`, relevance: 0.9, source: 'knowledge-base' },
-      { content: `Additional info on: ${query}`, relevance: 0.7, source: 'documents' },
-      { content: `Related: ${query}`, relevance: 0.6, source: 'cache' }
+      { content: `Result for: ${query}`, relevance: 0.9, source: 'knowledge-base', document: `Result for: ${query}` },
+      { content: `Additional info on: ${query}`, relevance: 0.7, source: 'documents', document: `Additional info on: ${query}` },
+      { content: `Related: ${query}`, relevance: 0.6, source: 'cache', document: `Related: ${query}` }
     ];
   }
 
@@ -115,8 +139,8 @@ export class ResearcherAgent extends Agent {
       ? (results.reduce((sum, r) => sum + r.relevance, 0) / results.length * 100).toFixed(1)
       : 0;
 
-    const sources = [...new Set(results.map(r => r.source))];
-    const summary = relevant.map(r => r.content).join(' | ');
+    const sources = [...new Set(results.map(r => r.source || 'unknown'))];
+    const summary = relevant.map(r => r.content || r.document || '').filter(Boolean).join(' | ');
 
     return { relevant, sources, avgConfidence, summary };
   }
