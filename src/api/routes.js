@@ -11,7 +11,6 @@ import { getJobQueue } from '../core/job-queue.js';
 
 // Import subsystems
 import { agentManager } from '../ai/agents/base-agent.js';
-import { PlannerAgentInstance, ResearcherAgentInstance, ExecutorAgentInstance, CriticAgentInstance, MemoryAgentInstance } from '../ai/agents/builtin-agents.js';
 import { knowledgeGraph } from '../ai/knowledge/graph.js';
 import { hybridSearch, semanticCache } from '../ai/rag/hybrid-search.js';
 import { crossEncoderReranker } from '../ai/rag/reranker.js';
@@ -20,7 +19,6 @@ import { imageProcessor, audioProcessor } from '../ai/vision/image-processor.js'
 
 const router = express.Router();
 const db = getDatabase();
-const logger = getLogger();
 const config = getConfig();
 
 /**
@@ -413,54 +411,54 @@ router.get('/', (req, res) => {
     version: '5.0.0',
     description: 'Complete AI OS with agents, RAG, knowledge graphs, workflows, vision, and audio',
     endpoints: {
-      health: {
-        GET: '/health - Health check',
-        GET: '/ready - Readiness check',
-        GET: '/stats - System statistics'
-      },
-      agents: {
-        GET: '/agents - List all agents',
-        POST: '/agents/:agentId/execute - Execute agent',
-        GET: '/agents/:agentId/state - Get agent state',
-        GET: '/agents/history - Execution history'
-      },
-      rag: {
-        POST: '/search/hybrid - Hybrid search',
-        POST: '/search/rerank - Rerank results',
-        GET: '/search/cache/stats - Cache stats'
-      },
-      knowledge: {
-        POST: '/knowledge/nodes - Create node',
-        GET: '/knowledge/nodes/:nodeLabel - Get node',
-        POST: '/knowledge/edges - Create relationship',
-        GET: '/knowledge/query - Query graph',
-        POST: '/knowledge/build - Build from text',
-        GET: '/knowledge/stats - Graph statistics'
-      },
-      workflows: {
-        POST: '/workflows - Create workflow',
-        POST: '/workflows/:workflowId/execute - Execute workflow',
-        POST: '/workflows/:workflowId/schedule - Schedule workflow',
-        GET: '/workflows/scheduler/stats - Scheduler stats'
-      },
-      vision: {
-        POST: '/vision/process - Process image',
-        GET: '/vision/similar/:imageId - Find similar images',
-        GET: '/vision/cache/stats - Cache stats'
-      },
-      audio: {
-        POST: '/audio/transcribe - Transcribe audio',
-        POST: '/audio/synthesize - Synthesize speech'
-      },
-      jobs: {
-        POST: '/jobs - Enqueue job',
-        GET: '/jobs/queues - Queue stats',
-        GET: '/jobs/queues/:queue - Queue details'
-      },
-      system: {
-        GET: '/config - Configuration',
-        GET: '/logs - Logs'
-      }
+      health: [
+        'GET /health - Health check',
+        'GET /ready - Readiness check',
+        'GET /stats - System statistics'
+      ],
+      agents: [
+        'GET /agents - List all agents',
+        'POST /agents/:agentId/execute - Execute agent',
+        'GET /agents/:agentId/state - Get agent state',
+        'GET /agents/history - Execution history'
+      ],
+      rag: [
+        'POST /search/hybrid - Hybrid search',
+        'POST /search/rerank - Rerank results',
+        'GET /search/cache/stats - Cache stats'
+      ],
+      knowledge: [
+        'POST /knowledge/nodes - Create node',
+        'GET /knowledge/nodes/:nodeLabel - Get node',
+        'POST /knowledge/edges - Create relationship',
+        'GET /knowledge/query - Query graph',
+        'POST /knowledge/build - Build from text',
+        'GET /knowledge/stats - Graph statistics'
+      ],
+      workflows: [
+        'POST /workflows - Create workflow',
+        'POST /workflows/:workflowId/execute - Execute workflow',
+        'POST /workflows/:workflowId/schedule - Schedule workflow',
+        'GET /workflows/scheduler/stats - Scheduler stats'
+      ],
+      vision: [
+        'POST /vision/process - Process image',
+        'GET /vision/similar/:imageId - Find similar images',
+        'GET /vision/cache/stats - Cache stats'
+      ],
+      audio: [
+        'POST /audio/transcribe - Transcribe audio',
+        'POST /audio/synthesize - Synthesize speech'
+      ],
+      jobs: [
+        'POST /jobs - Enqueue job',
+        'GET /jobs/queues - Queue stats',
+        'GET /jobs/queues/:queue - Queue details'
+      ],
+      system: [
+        'GET /config - Configuration',
+        'GET /logs - Logs'
+      ]
     },
     timestamp: new Date().toISOString()
   });

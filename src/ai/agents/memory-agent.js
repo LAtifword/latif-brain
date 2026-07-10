@@ -3,7 +3,7 @@
  */
 
 export class MemoryAgent {
-  async execute(task) {
+  async execute(_task) {
     // Implementation for memory agent
   }
 }

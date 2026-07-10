@@ -3,7 +3,7 @@
  * Tests for all LATIF v5 subsystems
  */
 
-import { Agent, AgentManager } from '../../src/ai/agents/base-agent.js';
+import { AgentManager } from '../../src/ai/agents/base-agent.js';
 import { PlannerAgent, ResearcherAgent, ExecutorAgent, CriticAgent, MemoryAgent } from '../../src/ai/agents/builtin-agents.js';
 import { KnowledgeGraph } from '../../src/ai/knowledge/graph.js';
 import { HybridSearch, SemanticCache } from '../../src/ai/rag/hybrid-search.js';
@@ -349,7 +349,7 @@ describe('LATIF v5 Integration Tests', () => {
 
     test('Knowledge graph integration with RAG', async () => {
       const graph = new KnowledgeGraph();
-      const search = new HybridSearch();
+      // const search = new HybridSearch();
 
       // Build knowledge graph
       await graph.buildFromText('Alice works at Google. Bob knows Alice.');

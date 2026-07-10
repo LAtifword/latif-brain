@@ -3,7 +3,7 @@
  */
 
 export class ExecutorAgent {
-  async execute(task) {
+  async execute(_task) {
     // Implementation for executor agent
   }
 }

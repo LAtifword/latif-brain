@@ -276,7 +276,7 @@ export class Agent {
    */
   selectTool(action) {
     // Match action to tool
-    for (const [toolName, _] of this.tools) {
+    for (const [toolName] of this.tools) {
       if (action.toLowerCase().includes(toolName.toLowerCase())) {
         return toolName;
       }
@@ -289,7 +289,6 @@ export class Agent {
    */
   identifySteps(task) {
     // Break task into steps
-    const steps = [];
     if (task.includes('and')) {
       return task.split('and').map(s => s.trim());
     }

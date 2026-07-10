@@ -207,7 +207,7 @@ export class JobQueue {
 
   startQueueProcessor(queue) {
     const queueWorkers = this.workers.get(queue);
-    const processor = setInterval(async () => {
+    setInterval(async () => {
       if (!this.isRunning) return;
 
       const availableWorker = queueWorkers.find(w => w.canAccept());
@@ -352,7 +352,7 @@ export class JobQueue {
   async getDeadLetterQueue(limit = 50, offset = 0) {
     try {
       return await this.db.all(
-        `SELECT * FROM dead_letter_queue WHERE resolved = 0 LIMIT ? OFFSET ?`,
+        'SELECT * FROM dead_letter_queue WHERE resolved = 0 LIMIT ? OFFSET ?',
         [limit, offset]
       );
     } catch (error) {

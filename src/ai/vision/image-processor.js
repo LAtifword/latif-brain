@@ -6,11 +6,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../../core/data-layer.js';
 import { getLogger } from '../../core/logger.js';
-import { getConfig } from '../../core/config.js';
 
 const logger = getLogger();
 const db = getDatabase();
-const config = getConfig();
 
 /**
  * Image Processor - Main vision system
@@ -74,7 +72,7 @@ export class ImageProcessor {
   /**
    * Generate image tags using CLIP
    */
-  async generateTags(imageBuffer, options = {}) {
+  async generateTags(_imageBuffer, options = {}) {
     const topK = options.topK || 10;
     const tags = [];
 
@@ -101,7 +99,7 @@ export class ImageProcessor {
   /**
    * Extract text using OCR
    */
-  async extractText(imageBuffer, options = {}) {
+  async extractText(_imageBuffer, _options = {}) {
     // In production: would call actual OCR engine (Paddle, Tesseract, etc.)
     // Placeholder: return empty with confidence 0
     return {
@@ -120,7 +118,7 @@ export class ImageProcessor {
   /**
    * Detect objects in image
    */
-  async detectObjects(imageBuffer, options = {}) {
+  async detectObjects(_imageBuffer, _options = {}) {
     // In production: would call YOLO or similar
     // Placeholder implementation
     return {
@@ -134,7 +132,7 @@ export class ImageProcessor {
   /**
    * Generate image embedding
    */
-  async getImageEmbedding(imageBuffer) {
+  async getImageEmbedding(_imageBuffer) {
     // In production: would compute actual CLIP embedding
     // Placeholder: return random embedding
     return Array(512).fill(0).map(() => Math.random());
@@ -346,7 +344,7 @@ export class AudioProcessor {
   /**
    * Detect speech in audio
    */
-  async detectSpeech(audioBuffer, options = {}) {
+  async detectSpeech(_audioBuffer, _options = {}) {
     // Placeholder: return empty
     return {
       segments: [],
@@ -358,7 +356,7 @@ export class AudioProcessor {
   /**
    * Extract audio features
    */
-  async extractFeatures(audioBuffer, options = {}) {
+  async extractFeatures(_audioBuffer, _options = {}) {
     return {
       mfcc: [], // Mel-frequency cepstral coefficients
       spectrogram: [],

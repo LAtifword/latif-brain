@@ -4,11 +4,9 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { getDatabase } from '../../core/data-layer.js';
 import { getLogger } from '../../core/logger.js';
 
 const logger = getLogger();
-const db = getDatabase();
 
 /**
  * Workflow Node (task in DAG)
@@ -276,20 +274,20 @@ export class WorkflowExecution {
       let result;
 
       switch (node.type) {
-        case 'task':
-          result = await this.executeTask(node);
-          break;
-        case 'condition':
-          result = await this.executeCondition(node);
-          break;
-        case 'loop':
-          result = await this.executeLoop(node);
-          break;
-        case 'parallel':
-          result = await this.executeParallel(node);
-          break;
-        default:
-          result = { status: 'unknown' };
+      case 'task':
+        result = await this.executeTask(node);
+        break;
+      case 'condition':
+        result = await this.executeCondition(node);
+        break;
+      case 'loop':
+        result = await this.executeLoop(node);
+        break;
+      case 'parallel':
+        result = await this.executeParallel(node);
+        break;
+      default:
+        result = { status: 'unknown' };
       }
 
       node.result = result;
@@ -473,7 +471,7 @@ export class WorkflowScheduler {
   async tick() {
     const now = Date.now();
 
-    for (const [scheduleId, schedule] of this.schedules) {
+    for (const [, schedule] of this.schedules) {
       if (!schedule.enabled) continue;
       if (schedule.nextRun > now) continue;
 

@@ -2,7 +2,7 @@
  * CLI Command: status
  */
 
-export async function handle(args) {
+export async function handle(_args) {
   console.log('Executing: status');
   // Implementation
 }

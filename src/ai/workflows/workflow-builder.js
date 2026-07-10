@@ -3,7 +3,7 @@
  */
 
 export class WorkflowBuilder {
-  addNode(node) {}
-  addEdge(source, target) {}
+  addNode(_node) {}
+  addEdge(_source, _target) {}
   build() {}
 }

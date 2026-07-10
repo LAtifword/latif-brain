@@ -265,7 +265,7 @@ export function getLogger() {
 
 export { Logger, LOG_LEVELS };
 
-export const logger = new Proxy(
+export const loggerProxy = new Proxy(
   {},
   {
     get: (target, prop) => {

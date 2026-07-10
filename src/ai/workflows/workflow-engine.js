@@ -3,7 +3,7 @@
  */
 
 export class WorkflowEngine {
-  async execute(workflow, input) {
+  async execute(_workflow, _input) {
     // Execute workflow
   }
 }

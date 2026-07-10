@@ -3,7 +3,7 @@
  */
 
 export class ResearcherAgent {
-  async execute(task) {
+  async execute(_task) {
     // Implementation for researcher agent
   }
 }

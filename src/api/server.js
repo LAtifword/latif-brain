@@ -8,9 +8,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { v4 as uuid } from 'uuid';
 import { logger, initializeLogger } from '../core/logger.js';
-import { initializeConfig, getConfig } from '../core/config.js';
-import { initializeDataLayer, getDatabase } from '../core/data-layer.js';
-import { initializeJobQueue, getJobQueue } from '../core/job-queue.js';
+import { initializeConfig } from '../core/config.js';
+import { initializeDataLayer } from '../core/data-layer.js';
+import { initializeJobQueue } from '../core/job-queue.js';
 
 class APIServer {
   constructor() {
@@ -317,7 +317,7 @@ class APIServer {
   }
 
   setupErrorHandling() {
-    this.app.use((err, req, res, next) => {
+    this.app.use((err, req, res, _next) => {
       logger.error('Unhandled error', {
         error: err.message,
         stack: err.stack,
@@ -349,7 +349,7 @@ class APIServer {
     });
 
     this.app.post('/agents/:agentId/execute', (req, res) => {
-      const { task, context } = req.body;
+      const { task } = req.body;
       res.json({
         success: true,
         agentId: req.params.agentId,
@@ -417,7 +417,6 @@ class APIServer {
     });
 
     this.app.post('/knowledge/build', (req, res) => {
-      const { text } = req.body;
       res.json({
         nodesCreated: 3,
         edgesCreated: 2,

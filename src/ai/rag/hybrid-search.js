@@ -3,11 +3,9 @@
  * Phase 2 implementation for advanced retrieval quality
  */
 
-import { getDatabase } from '../../core/data-layer.js';
 import { getLogger } from '../../core/logger.js';
 
 const logger = getLogger();
-const db = getDatabase();
 
 /**
  * BM25 Algorithm implementation for keyword search
@@ -156,7 +154,7 @@ export class HybridSearch {
   /**
    * Compute query embedding (placeholder - would call AI service)
    */
-  async computeEmbedding(text) {
+  async computeEmbedding(_text) {
     // Simplified: return random embedding (real system would call API)
     return Array(384).fill(0).map(() => Math.random());
   }

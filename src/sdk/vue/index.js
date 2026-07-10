@@ -2,7 +2,7 @@
  * LATIF Vue SDK
  */
 
-import { provide, inject } from 'vue';
+import { inject } from 'vue';
 
 export const useLatifChat = () => inject('latif-chat');
 export const useLatifModels = () => inject('latif-models');

@@ -23,7 +23,7 @@ export class CrossEncoderReranker {
   async rerank(query, documents, topK = 10) {
     // Score each document
     const scores = await Promise.all(
-      documents.map((doc, idx) => this.scoreRelevance(query, doc))
+      documents.map((doc) => this.scoreRelevance(query, doc))
     );
 
     // Pair scores with documents
@@ -188,7 +188,7 @@ export class RAGPipeline {
    * Citation tracking: which source each result came from
    */
   trackCitations(results, sources) {
-    return results.map((result, idx) => ({
+    return results.map((result, _idx) => ({
       ...result,
       citations: this.extractCitations(result.document, sources)
     }));

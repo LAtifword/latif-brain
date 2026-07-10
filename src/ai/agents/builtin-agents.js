@@ -300,16 +300,16 @@ export class MemoryAgent extends Agent {
     const { type, content } = this.parseMemoryAction(action);
 
     switch (type) {
-      case 'store':
-        return this.storeKnowledge(content);
-      case 'retrieve':
-        return this.retrieveKnowledge(content);
-      case 'consolidate':
-        return this.consolidateKnowledge();
-      case 'forget':
-        return this.forgetKnowledge(content);
-      default:
-        return { status: 'unknown-action' };
+    case 'store':
+      return this.storeKnowledge(content);
+    case 'retrieve':
+      return this.retrieveKnowledge(content);
+    case 'consolidate':
+      return this.consolidateKnowledge();
+    case 'forget':
+      return this.forgetKnowledge(content);
+    default:
+      return { status: 'unknown-action' };
     }
   }
 
@@ -402,18 +402,9 @@ export class MemoryAgent extends Agent {
   }
 }
 
-// Export all agents
+// Export agent instances
 export const PlannerAgentInstance = new PlannerAgent();
 export const ResearcherAgentInstance = new ResearcherAgent();
 export const ExecutorAgentInstance = new ExecutorAgent();
 export const CriticAgentInstance = new CriticAgent();
 export const MemoryAgentInstance = new MemoryAgent();
-
-// Export classes
-export {
-  PlannerAgent,
-  ResearcherAgent,
-  ExecutorAgent,
-  CriticAgent,
-  MemoryAgent
-};

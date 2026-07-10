@@ -4,7 +4,6 @@
  */
 
 import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import { logger } from './logger.js';
@@ -164,7 +163,7 @@ class Database {
       params.push(...Object.values(where));
     }
 
-    sql += ` LIMIT ? OFFSET ?`;
+    sql += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     return this.all(sql, params);
@@ -204,7 +203,7 @@ class Database {
   async getStats() {
     try {
       const dbFile = fs.statSync(this.dbPath);
-      const tables = await this.all("SELECT name FROM sqlite_master WHERE type='table'");
+      const tables = await this.all('SELECT name FROM sqlite_master WHERE type=\'table\'');
 
       return {
         file_size_bytes: dbFile.size,
@@ -312,7 +311,7 @@ export class JobQueueRepository {
     );
   }
 
-  async markProcessing(jobId, workerId) {
+  async markProcessing(jobId, _workerId) {
     return this.db.update('jobs', jobId, {
       status: 'processing',
       started_at: new Date().toISOString()

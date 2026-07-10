@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import archiver from 'archiver';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,66 +14,44 @@ const projectRoot = path.dirname(__dirname);
 const packageDir = path.join(projectRoot, 'dist');
 const zipPath = path.join(packageDir, 'latif-v5.0.0.zip');
 
-// Fix for archiver module
-let archiverModule;
-try {
-  archiverModule = await import('archiver');
-} catch (e) {
-  console.error('Failed to import archiver:', e.message);
-  process.exit(1);
-}
+// Files and directories to include - reserved for future use
+// const INCLUDE_PATTERNS = [
+//   'src/**/*.js',
+//   'src/**/*.d.ts',
+//   'src/**/*.sql',
+//   'config/**/*.json',
+//   '.env.example',
+//   'MASTER_PROMPT.md',
+//   'OPERATING_SYSTEM_ARCHITECTURE.md',
+//   'PHASE1_FOUNDATION.md',
+//   'README.md',
+//   'docs/**/*.md',
+//   'tools/**/*.js',
+//   'tools/**/*.sh',
+//   'package.json',
+//   'package-lock.json',
+//   'LICENSE',
+//   '.gitignore',
+//   'android/**/*',
+//   'termux/**/*'
+// ];
 
-// Files and directories to include
-const INCLUDE_PATTERNS = [
-  // Source code
-  'src/**/*.js',
-  'src/**/*.d.ts',
-  'src/**/*.sql',
-
-  // Configuration
-  'config/**/*.json',
-  '.env.example',
-
-  // Documentation
-  'MASTER_PROMPT.md',
-  'OPERATING_SYSTEM_ARCHITECTURE.md',
-  'PHASE1_FOUNDATION.md',
-  'README.md',
-  'docs/**/*.md',
-
-  // Scripts and tools
-  'tools/**/*.js',
-  'tools/**/*.sh',
-
-  // Package files
-  'package.json',
-  'package-lock.json',
-
-  // License and meta
-  'LICENSE',
-  '.gitignore',
-
-  // Android/Termux specific
-  'android/**/*',
-  'termux/**/*'
-];
-
-// Files to exclude
-const EXCLUDE_PATTERNS = [
-  'node_modules/**',
-  '.git/**',
-  'dist/**',
-  '.env',
-  'latif.db',
-  'logs/**',
-  'uploads/**',
-  'temp/**',
-  '.DS_Store',
-  '*.swp',
-  '*.swo',
-  '.idea/**',
-  '.vscode/**'
-];
+// Files to exclude - reserved for future use
+// const EXCLUDE_PATTERNS = [
+//   'node_modules/**',
+//   '.git/**',
+//   'dist/**',
+//   '.env',
+//   'latif.db',
+//   'logs/**',
+//   'uploads/**',
+//   'temp/**',
+//   '.DS_Store',
+//   '*.swp',
+//   '*.swo',
+//   '.idea/**',
+//   '.vscode/**'
+// ];
 
 async function createZip() {
   console.log('📦 Packaging LATIF v5...\n');

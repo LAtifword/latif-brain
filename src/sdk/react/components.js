@@ -1,11 +1,11 @@
 export function ChatUI() {
-  return <div>Chat UI Component</div>;
+  return 'Chat UI Component';
 }
 
 export function AgentMonitor() {
-  return <div>Agent Monitor Component</div>;
+  return 'Agent Monitor Component';
 }
 
-export function KnowledgeGraph() {
-  return <div>Knowledge Graph Component</div>;
+export function KnowledgeGraphUI() {
+  return 'Knowledge Graph Component';
 }

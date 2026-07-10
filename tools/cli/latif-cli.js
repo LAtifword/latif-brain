@@ -23,7 +23,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 
 class LatifCLI {
   constructor() {
@@ -218,32 +217,32 @@ latif-cli plugin:test .
     // Implementation: install from registry
   }
 
-  async listPlugins(args) {
+  async listPlugins(_args) {
     console.log('Installed plugins:');
     // Implementation: list installed plugins
   }
 
-  async start(args) {
+  async start(_args) {
     console.log('Starting LATIF server...');
     // Implementation: start server
   }
 
-  async dev(args) {
+  async dev(_args) {
     console.log('Starting dev server...');
     // Implementation: start dev server with hot reload
   }
 
-  async build(args) {
+  async build(_args) {
     console.log('Building for production...');
     // Implementation: build for production
   }
 
-  async test(args) {
+  async test(_args) {
     console.log('Running tests...');
     // Implementation: run full test suite
   }
 
-  async generateDocs(args) {
+  async generateDocs(_args) {
     console.log('Generating documentation...');
     // Implementation: generate API documentation
   }

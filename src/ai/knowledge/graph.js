@@ -4,11 +4,9 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { getDatabase } from '../../core/data-layer.js';
 import { getLogger } from '../../core/logger.js';
 
 const logger = getLogger();
-const db = getDatabase();
 
 /**
  * Knowledge Graph Node
@@ -169,7 +167,7 @@ export class KnowledgeGraph {
       if (nodeId === targetId) return true;
 
       // Follow outgoing edges
-      for (const [_, edge] of this.edges) {
+      for (const [, edge] of this.edges) {
         if (edge.sourceId === nodeId && !visited.has(edge.targetId)) {
           if (dfs(edge.targetId, depth + 1)) return true;
         }
@@ -364,7 +362,7 @@ export class KnowledgeGraph {
     if (!node1 || !node2) return false;
 
     // Redirect all edges from node2 to node1
-    this.edges.forEach((edge, edgeId) => {
+    this.edges.forEach((edge, _edgeId) => {
       if (edge.sourceId === nodeId2) edge.sourceId = nodeId1;
       if (edge.targetId === nodeId2) edge.targetId = nodeId1;
     });

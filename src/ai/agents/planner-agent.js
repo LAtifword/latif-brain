@@ -3,7 +3,7 @@
  */
 
 export class PlannerAgent {
-  async execute(task) {
+  async execute(_task) {
     // Implementation for planner agent
   }
 }

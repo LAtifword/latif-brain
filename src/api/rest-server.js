@@ -324,7 +324,7 @@ class RESTServer {
 
   authMiddleware(req, res, next) {
     // Implement API key or JWT validation
-    const token = req.headers.authorization?.split(' ')[1];
+    // const token = req.headers.authorization?.split(' ')[1];
     // Validate token...
     next();
   }
@@ -354,7 +354,7 @@ class RESTServer {
     next();
   }
 
-  errorMiddleware(err, req, res, next) {
+  errorMiddleware(err, req, res, _next) {
     this.logger.error(`API error: ${err.message}`);
     res.status(500).json({ error: 'Internal server error' });
   }

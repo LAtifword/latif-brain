@@ -22,7 +22,7 @@ class PluginLoader {
   /**
    * Load plugin from source (filesystem, web, or registry)
    */
-  async loadPlugin(source, options = {}) {
+  async loadPlugin(source, _options = {}) {
     try {
       this.logger.info(`Loading plugin from: ${source}`);
 
@@ -193,7 +193,7 @@ class PluginLoader {
     };
   }
 
-  async loadLocalManifest(source) {
+  async loadLocalManifest(_source) {
     // Implementation: fetch manifest.json from local filesystem
     throw new Error('Local plugin loading not implemented in browser context');
   }
@@ -204,8 +204,7 @@ class PluginLoader {
     return res.json();
   }
 
-  async loadRegistryManifest(source) {
-    const pluginName = source.replace('registry://', '');
+  async loadRegistryManifest(_source) {
     // Implementation: fetch from LATIF plugin registry
     throw new Error('Registry loading not implemented yet');
   }
@@ -254,11 +253,11 @@ class PluginContext {
     // Return available models
   }
 
-  async runModel(modelName, params) {
+  async runModel(_modelName, _params) {
     // Execute model with timeout protection
   }
 
-  async generateEmbedding(text) {
+  async generateEmbedding(_text) {
     // Generate embedding for text
   }
 
@@ -272,26 +271,26 @@ class PluginContext {
   }
 
   // Tool Registration API
-  registerTool(toolName, definition) {
+  registerTool(_toolName, _definition) {
     // Register a tool that can be called by LATIF
   }
 
   // Hook Registration API
-  registerHook(hookName, handler) {
+  registerHook(_hookName, _handler) {
     // Register a hook (onMessage, onToolCall, etc.)
   }
 
   // UI API
-  registerComponent(componentName, component) {
+  registerComponent(_componentName, _component) {
     // Register a custom UI component
   }
 
   // Event API
-  emit(eventName, data) {
+  emit(_eventName, _data) {
     // Emit custom event
   }
 
-  on(eventName, handler) {
+  on(_eventName, _handler) {
     // Listen to custom events
   }
 }
