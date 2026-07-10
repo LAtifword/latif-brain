@@ -8,7 +8,6 @@ import { getDatabase } from '../../core/data-layer.js';
 import { getLogger } from '../../core/logger.js';
 
 const logger = getLogger();
-const db = getDatabase();
 
 /**
  * Image Processor - Main vision system
@@ -192,6 +191,7 @@ export class ImageProcessor {
    */
   async storeImageAnalysis(imageId, analysis) {
     try {
+      const db = getDatabase();
       await db.run(
         `INSERT INTO image_analysis (image_id, tags, ocr_text, objects, confidence, timestamp)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -371,6 +371,7 @@ export class AudioProcessor {
    */
   async storeTranscription(audioId, result) {
     try {
+      const db = getDatabase();
       await db.run(
         `INSERT INTO transcriptions (audio_id, text, language, confidence, timestamp)
          VALUES (?, ?, ?, ?, ?)`,

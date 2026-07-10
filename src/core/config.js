@@ -5,7 +5,9 @@
 
 import fs from 'fs';
 import path from 'path';
-import { logger } from './logger.js';
+import { getLogger } from './logger.js';
+
+const logger = getLogger();
 
 class ConfigManager {
   constructor() {

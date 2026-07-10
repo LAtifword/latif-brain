@@ -4,8 +4,10 @@
  */
 
 import { v4 as uuid } from 'uuid';
-import { logger } from './logger.js';
+import { getLogger } from './logger.js';
 import { getDatabase, JobQueueRepository } from './data-layer.js';
+
+const logger = getLogger();
 
 class Worker {
   constructor(id, queue, maxConcurrency = 1) {

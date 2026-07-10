@@ -4,7 +4,7 @@
  */
 
 import { initializeAPIServer } from './api/server.js';
-import { logger, initializeLogger } from './core/logger.js';
+import { loggerProxy as logger, initializeLogger } from './core/logger.js';
 
 async function main() {
   try {

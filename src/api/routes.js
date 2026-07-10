@@ -18,7 +18,6 @@ import { workflowScheduler, WorkflowDefinition, WorkflowExecution } from '../ai/
 import { imageProcessor, audioProcessor } from '../ai/vision/image-processor.js';
 
 const router = express.Router();
-const db = getDatabase();
 const config = getConfig();
 
 /**
@@ -53,7 +52,7 @@ router.get('/stats', (req, res) => {
       memory: process.memoryUsage(),
       cpuUsage: process.cpuUsage()
     },
-    database: db.getStats?.(),
+    database: getDatabase()?.getStats?.(),
     jobQueue: getJobQueue()?.getAllStats?.(),
     agents: agentManager.getStats(),
     timestamp: new Date().toISOString()

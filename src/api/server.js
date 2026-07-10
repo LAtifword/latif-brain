@@ -7,7 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { v4 as uuid } from 'uuid';
-import { logger, initializeLogger } from '../core/logger.js';
+import { loggerProxy as logger, initializeLogger } from '../core/logger.js';
 import { initializeConfig } from '../core/config.js';
 import { initializeDataLayer } from '../core/data-layer.js';
 import { initializeJobQueue } from '../core/job-queue.js';

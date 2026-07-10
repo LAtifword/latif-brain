@@ -8,7 +8,6 @@ import { getDatabase } from '../../core/data-layer.js';
 import { getLogger } from '../../core/logger.js';
 
 const logger = getLogger();
-const db = getDatabase();
 
 /**
  * Base Agent - Abstract class for all agents
@@ -203,6 +202,7 @@ export class Agent {
 
     // Save to database
     try {
+      const db = getDatabase();
       await db.run(
         `INSERT INTO agent_memory (agent_id, memory_type, content, timestamp)
          VALUES (?, ?, ?, ?)`,
