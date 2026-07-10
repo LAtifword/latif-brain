@@ -1,0 +1,132 @@
+{
+  "name": "latif-ai-os",
+  "version": "5.0.0",
+  "description": "Enterprise-grade AI Operating System - LATIF v5",
+  "main": "src/core/ai-core.js",
+  "type": "module",
+  "bin": {
+    "latif-cli": "tools/cli/latif-cli.js"
+  },
+  "scripts": {
+    "start": "node tools/dev-server.js",
+    "dev": "NODE_ENV=development node tools/dev-server.js",
+    "build": "node tools/build.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/e2e",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "docs": "node tools/generate-docs.js",
+    "lint": "eslint src tests tools",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"tools/**/*.js\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "node tools/setup.js"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "rag",
+    "agents",
+    "knowledge-graph",
+    "workflow",
+    "plugin-system",
+    "enterprise",
+    "nodejs"
+  ],
+  "author": "LATIF Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LAtifword/latif-brain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LAtifword/latif-brain/issues"
+  },
+  "homepage": "https://github.com/LAtifword/latif-brain#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "exports": {
+    ".": "./src/core/ai-core.js",
+    "./sdk": "./src/sdk/index.js",
+    "./api": "./src/api/rest-server.js",
+    "./plugins": "./src/plugins/plugin-loader.js",
+    "./types": "./src/types/index.d.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "compression": "^1.7.4",
+    "helmet": "^7.0.0",
+    "uuid": "^9.0.0",
+    "pino": "^8.0.0",
+    "joi": "^17.0.0",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "babel-jest": "^29.0.0",
+    "eslint": "^8.43.0",
+    "prettier": "^2.8.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^4.15.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.jsx?$": "babel-jest"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.d.ts",
+      "!src/**/index.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
+      }
+    }
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "node": "18"
+          }
+        }
+      ]
+    ]
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2021": true,
+      "jest": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": 12,
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "warn",
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ]
+    }
+  }
+}
