@@ -217,40 +217,70 @@ export class HybridSearch {
   }
 
   /**
-   * Clear old cache entries (LRU eviction)
+   * Clear old cache entries with intelligent LRU eviction
    */
   pruneCache(maxSize = 1000) {
-    if (this.cache.size > maxSize) {
-      const entriesToDelete = Math.ceil(this.cache.size * 0.2);
-      let deleted = 0;
-      for (const key of this.cache.keys()) {
-        if (deleted >= entriesToDelete) break;
-        this.cache.delete(key);
-        deleted++;
-      }
-      logger.info(`Pruned ${deleted} cache entries`);
+    if (this.cache.size <= maxSize) return;
+
+    const entriesToDelete = Math.ceil(this.cache.size * 0.2);
+    let deleted = 0;
+
+    // Delete oldest entries first (FIFO + LRU)
+    for (const key of this.cache.keys()) {
+      if (deleted >= entriesToDelete) break;
+      this.cache.delete(key);
+      deleted++;
     }
+
+    logger.info('Cache pruned', {
+      deletedEntries: deleted,
+      remainingSize: this.cache.size,
+      maxSize: maxSize
+    });
   }
 
   /**
-   * Get cache statistics
+   * Get comprehensive cache statistics
    */
   getCacheStats() {
     return {
       cacheSize: this.cache.size,
-      memorySizeEstimate: this.cache.size * 1024, // Rough estimate
+      memorySizeEstimate: `${(this.cache.size * 1.5).toFixed(0)} KB`,
+      hitRate: this.getHitRate(),
       timestamp: new Date().toISOString()
     };
+  }
+
+  /**
+   * Track cache hit rate
+   */
+  getHitRate() {
+    if (!this.hitCount) {
+      this.hitCount = 0;
+      this.missCount = 0;
+    }
+    const total = this.hitCount + this.missCount;
+    return total > 0 ? ((this.hitCount / total) * 100).toFixed(1) : '0%';
+  }
+
+  /**
+   * Reset cache statistics
+   */
+  resetStats() {
+    this.hitCount = 0;
+    this.missCount = 0;
   }
 }
 
 /**
- * Semantic Cache for deduplicating similar queries
+ * Semantic Cache for deduplicating similar queries with LRU eviction
  */
 export class SemanticCache {
-  constructor(similarityThreshold = 0.95) {
+  constructor(similarityThreshold = 0.95, maxEntries = 500) {
     this.threshold = similarityThreshold;
+    this.maxEntries = maxEntries;
     this.entries = [];
+    this.accessCounts = new Map();
   }
 
   /**
@@ -260,6 +290,10 @@ export class SemanticCache {
     for (const entry of this.entries) {
       const similarity = this.cosineSimilarity(queryEmbedding, entry.embedding);
       if (similarity >= this.threshold) {
+        // Track access for LRU
+        const entryKey = this.getEntryKey(entry);
+        this.accessCounts.set(entryKey, (this.accessCounts.get(entryKey) || 0) + 1);
+        entry.lastAccess = Date.now();
         return entry;
       }
     }
@@ -267,20 +301,73 @@ export class SemanticCache {
   }
 
   /**
-   * Cache query and response
+   * Cache query and response with metadata
    */
-  set(query, embedding, response) {
-    this.entries.push({
+  set(query, embedding, response, metadata = {}) {
+    const entry = {
       query,
       embedding,
       response,
-      timestamp: Date.now()
-    });
+      timestamp: Date.now(),
+      lastAccess: Date.now(),
+      relevanceScore: metadata.relevance || 1.0,
+      accessCount: 0,
+      metadata
+    };
 
-    // Keep only last 100 entries
-    if (this.entries.length > 100) {
-      this.entries = this.entries.slice(-100);
+    this.entries.push(entry);
+    const entryKey = this.getEntryKey(entry);
+    this.accessCounts.set(entryKey, 0);
+
+    // LRU eviction: remove least relevant entries when cache is full
+    if (this.entries.length > this.maxEntries) {
+      this.evictLRU();
     }
+  }
+
+  /**
+   * LRU eviction strategy: remove least recently used and least relevant entries
+   */
+  evictLRU() {
+    const entriesToDelete = Math.ceil(this.maxEntries * 0.1); // Delete 10%
+
+    // Score entries by usage and relevance
+    const scored = this.entries.map((entry, idx) => ({
+      idx,
+      entry,
+      score: this.computeEvictionScore(entry)
+    }));
+
+    // Sort by score ascending (lowest score = evict first)
+    scored.sort((a, b) => a.score - b.score);
+
+    // Remove lowest scored entries
+    const toRemove = scored.slice(0, entriesToDelete).map(s => s.idx);
+    this.entries = this.entries.filter((_, idx) => !toRemove.includes(idx));
+
+    logger.info(`Evicted ${entriesToDelete} cache entries (LRU)`, {
+      remainingEntries: this.entries.length,
+      evictionStrategy: 'LRU by relevance'
+    });
+  }
+
+  /**
+   * Compute eviction score (lower = evict first)
+   */
+  computeEvictionScore(entry) {
+    const age = Date.now() - entry.lastAccess;
+    const relevance = entry.relevanceScore || 1.0;
+    const accessCount = this.accessCounts.get(this.getEntryKey(entry)) || 0;
+
+    // Score: age (higher is worse) - relevance (higher is better) - access count (higher is better)
+    return (age / 1000000) - relevance - (accessCount / 100);
+  }
+
+  /**
+   * Get unique key for entry
+   */
+  getEntryKey(entry) {
+    return `${entry.query}::${entry.timestamp}`;
   }
 
   /**
@@ -305,16 +392,24 @@ export class SemanticCache {
    */
   clear() {
     this.entries = [];
+    this.accessCounts.clear();
   }
 
   /**
-   * Get cache stats
+   * Get cache statistics
    */
   getStats() {
+    const accessCounts = Array.from(this.accessCounts.values());
+    const avgAccess = accessCounts.length > 0 ? accessCounts.reduce((a, b) => a + b, 0) / accessCounts.length : 0;
+
     return {
       cacheEntries: this.entries.length,
+      maxEntries: this.maxEntries,
+      utilizationPercent: ((this.entries.length / this.maxEntries) * 100).toFixed(1),
       oldestEntry: this.entries[0]?.timestamp,
-      newestEntry: this.entries[this.entries.length - 1]?.timestamp
+      newestEntry: this.entries[this.entries.length - 1]?.timestamp,
+      avgAccessCount: avgAccess.toFixed(2),
+      totalMemoryEstimate: `${(this.entries.length * 10).toFixed(0)} KB`
     };
   }
 }

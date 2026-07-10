@@ -58,30 +58,62 @@ export class CrossEncoderReranker {
   }
 
   /**
-   * Compute relevance score (heuristic)
+   * Compute relevance score (enhanced heuristic)
    * In production: would call actual cross-encoder model (MiniLM, etc.)
    */
   computeRelevanceScore(query, document) {
     const queryTokens = new Set(query.toLowerCase().split(/\s+/));
+    const queryPhrase = query.toLowerCase();
+    const docLower = document.toLowerCase();
     const docTokens = document.toLowerCase().split(/\s+/);
 
     let matchCount = 0;
     let totalTokens = docTokens.length;
 
+    // Exact token matches
     docTokens.forEach(token => {
       if (queryTokens.has(token)) {
         matchCount++;
       }
     });
 
+    // Phrase match bonus (higher weight)
+    const phraseMatch = docLower.includes(queryPhrase) ? 1.0 : 0.0;
+
     // Position boost: matches at start weighted higher
     const positionBoost = docTokens.slice(0, Math.min(50, totalTokens)).reduce((boost, token, idx) => {
       return queryTokens.has(token) ? boost + (1 - idx / 50) * 0.5 : boost;
     }, 0);
 
-    // Relevance score: 0-1
+    // Sentence proximity: boost if query terms are close together
+    const sentences = document.split(/[.!?]+/);
+    let proximityScore = 0;
+    sentences.forEach(sentence => {
+      const sentenceTokens = sentence.toLowerCase().split(/\s+/);
+      let sentenceMatches = 0;
+      sentenceTokens.forEach(token => {
+        if (queryTokens.has(token)) sentenceMatches++;
+      });
+      // Score: match ratio in this sentence
+      if (sentenceMatches > 0) {
+        proximityScore += (sentenceMatches / queryTokens.size) / sentences.length;
+      }
+    });
+
+    // Document length penalty (too short or too long docs less relevant)
+    const lengthRatio = Math.min(1, totalTokens / 200);
+    const lengthScore = lengthRatio > 0.1 ? 1.0 : lengthRatio;
+
+    // Combine scores with weights
     const baseScore = matchCount / Math.max(queryTokens.size, 1);
-    const finalScore = Math.min(1, (baseScore * 0.6 + positionBoost * 0.4));
+    const finalScore = Math.min(
+      1,
+      baseScore * 0.35 +
+        phraseMatch * 0.30 +
+        positionBoost * 0.15 +
+        proximityScore * 0.15 +
+        (lengthScore * 0.05)
+    );
 
     return finalScore;
   }
@@ -185,34 +217,55 @@ export class RAGPipeline {
   }
 
   /**
-   * Citation tracking: which source each result came from
+   * Enhanced citation tracking: which source each result came from
    */
-  trackCitations(results, sources) {
-    return results.map((result, _idx) => ({
-      ...result,
-      citations: this.extractCitations(result.document, sources)
-    }));
+  trackCitations(results, sources = []) {
+    return results.map((result, _idx) => {
+      const citations = this.extractCitations(result.document || result, sources);
+
+      return {
+        ...result,
+        citations: citations.map(c => ({
+          source: c,
+          position: this.findSourcePosition(result.document || result, c),
+          confidence: 0.95
+        })),
+        citationCount: citations.length
+      };
+    });
   }
 
   /**
-   * Extract citations from document
+   * Extract citations from document with position tracking
    */
-  extractCitations(document, sources) {
+  extractCitations(document, sources = []) {
     const citations = [];
+    const docLower = document.toLowerCase();
+
     sources.forEach(source => {
-      if (document.toLowerCase().includes(source.toLowerCase())) {
+      if (docLower.includes(source.toLowerCase())) {
         citations.push(source);
       }
     });
+
     return citations;
   }
 
   /**
-   * Context compression: extract key facts
+   * Find position of source in document
+   */
+  findSourcePosition(document, source) {
+    const position = document.toLowerCase().indexOf(source.toLowerCase());
+    const lineNumber = document.substring(0, position).split('\n').length;
+    return { characterOffset: position, lineNumber };
+  }
+
+  /**
+   * Enhanced context compression: extract and preserve key facts
    */
   compressContext(documents, maxTokens = 2000) {
     let totalTokens = 0;
-    const compressed = [];
+    const keyFactsMap = new Map();
 
     for (const doc of documents) {
       const tokens = doc.split(/\s+/).length;
@@ -220,20 +273,61 @@ export class RAGPipeline {
         break;
       }
 
-      // Extract key sentences (simplified)
+      // Extract key sentences with scoring
       const sentences = doc.split(/[.!?]+/).filter(s => s.trim());
-      const keyFacts = sentences
-        .filter(s => s.includes('important') || s.includes('key') || s.length > 50)
-        .slice(0, 3)
-        .join('. ');
+      const keyFacts = this.extractKeyFacts(sentences);
 
-      if (keyFacts) {
-        compressed.push(keyFacts);
-        totalTokens += keyFacts.split(/\s+/).length;
-      }
+      // Add top-3 key facts
+      keyFacts.slice(0, 3).forEach(fact => {
+        const key = fact.text;
+        if (!keyFactsMap.has(key)) {
+          keyFactsMap.set(key, { text: fact.text, score: fact.score });
+          totalTokens += fact.text.split(/\s+/).length;
+        }
+      });
+
+      if (keyFactsMap.size >= 10) break;
     }
 
-    return compressed.join(' ');
+    // Sort by score and return
+    const sortedFacts = Array.from(keyFactsMap.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.ceil(maxTokens / 50))
+      .map(f => f.text);
+
+    return sortedFacts.join(' ');
+  }
+
+  /**
+   * Extract and score key facts from sentences
+   */
+  extractKeyFacts(sentences) {
+    const facts = [];
+
+    sentences.forEach(sentence => {
+      const trimmed = sentence.trim();
+      if (!trimmed) return;
+
+      let score = 0;
+
+      // Length score: prefer medium-length sentences
+      const length = trimmed.split(/\s+/).length;
+      score += Math.max(0, 1 - Math.abs(length - 15) / 50);
+
+      // Keyword scoring: presence of important words
+      const importantKeywords = ['important', 'key', 'must', 'required', 'critical', 'essential', 'note', 'fact'];
+      const keywordMatches = importantKeywords.filter(kw => trimmed.toLowerCase().includes(kw)).length;
+      score += keywordMatches * 0.2;
+
+      // Begins with uppercase and ends with period
+      if (trimmed[0] === trimmed[0].toUpperCase() && trimmed.endsWith('.')) {
+        score += 0.3;
+      }
+
+      facts.push({ text: trimmed, score });
+    });
+
+    return facts.sort((a, b) => b.score - a.score);
   }
 
   /**
