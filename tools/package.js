@@ -15,6 +15,15 @@ const projectRoot = path.dirname(__dirname);
 const packageDir = path.join(projectRoot, 'dist');
 const zipPath = path.join(packageDir, 'latif-v5.0.0.zip');
 
+// Fix for archiver module
+let archiverModule;
+try {
+  archiverModule = await import('archiver');
+} catch (e) {
+  console.error('Failed to import archiver:', e.message);
+  process.exit(1);
+}
+
 // Files and directories to include
 const INCLUDE_PATTERNS = [
   // Source code
