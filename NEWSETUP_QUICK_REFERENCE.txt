@@ -1,0 +1,236 @@
+================================================================================
+LATIF v5.0.0 - NEWSETUP Quick Reference Card
+================================================================================
+
+📱 YOUR SETUP LOCATION: /storage/emulated/0/NEWSETUP
+
+================================================================================
+🚀 INSTALLATION (First Time Only - 5 Minutes)
+================================================================================
+
+1. Open Termux app on Android
+
+2. Download or copy these scripts:
+   - setup-termux-NEWSETUP.sh
+   - start-latif-NEWSETUP.sh
+   - configure-ollama-NEWSETUP.sh
+
+3. Make executable:
+   chmod +x ~/setup-termux-NEWSETUP.sh
+   chmod +x ~/start-latif-NEWSETUP.sh
+   chmod +x ~/configure-ollama-NEWSETUP.sh
+
+4. Run setup:
+   bash ~/setup-termux-NEWSETUP.sh
+
+5. Configure Ollama (optional):
+   bash ~/configure-ollama-NEWSETUP.sh
+
+================================================================================
+▶️ STARTING LATIF
+================================================================================
+
+Basic start:
+  bash ~/start-latif-NEWSETUP.sh
+
+Different port:
+  LATIF_PORT=3001 bash ~/start-latif-NEWSETUP.sh
+
+Background (keep running):
+  nohup bash ~/start-latif-NEWSETUP.sh > ~/.latif/logs/latif.log 2>&1 &
+
+================================================================================
+🧪 TESTING
+================================================================================
+
+Health check:
+  curl http://localhost:3000/api/health
+
+System stats:
+  curl http://localhost:3000/api/stats
+
+Available agents:
+  curl http://localhost:3000/api/agents
+
+Chat request:
+  curl -X POST http://localhost:3000/api/chat \
+    -H "Content-Type: application/json" \
+    -d '{"messages":[{"role":"user","content":"Hello"}]}'
+
+================================================================================
+🛑 STOPPING LATIF
+================================================================================
+
+Press Ctrl+C in Termux window
+
+Or kill process:
+  pkill -f "node src/main.js"
+
+================================================================================
+📂 FILE LOCATIONS
+================================================================================
+
+Project files:
+  /storage/emulated/0/NEWSETUP
+
+Symlink (easier access):
+  ~/latif-v5 → /storage/emulated/0/NEWSETUP
+
+Runtime data:
+  ~/.latif/
+    ├── data/       (database)
+    ├── logs/       (log files)
+    ├── cache/      (cached data)
+    └── backups/    (backups)
+
+Configuration:
+  /storage/emulated/0/NEWSETUP/config/android.json
+
+Logs:
+  ~/.latif/logs/latif.log
+
+================================================================================
+🔌 OLLAMA CONNECTION
+================================================================================
+
+For Ollama on desktop:
+  1. Note your desktop IP (Windows: ipconfig, Mac/Linux: ifconfig)
+  2. Run: bash ~/configure-ollama-NEWSETUP.sh
+  3. Enter desktop IP when prompted (e.g., 192.168.1.100)
+  4. Port: 11434
+
+Test connection:
+  curl http://192.168.1.100:11434/api/tags
+
+Troubleshoot:
+  - Both devices must be on same WiFi
+  - Check firewall allows port 11434
+  - Ollama must be running on desktop
+
+================================================================================
+⚙️ CONFIGURATION
+================================================================================
+
+Edit config:
+  nano /storage/emulated/0/NEWSETUP/config/android.json
+
+Key settings:
+  - llm.host: Ollama host (localhost or desktop IP)
+  - llm.port: Ollama port (11434)
+  - llm.model: Model name (qwen2.5:1.5b)
+  - server.port: API port (3000)
+
+For small models (low RAM):
+  "model": "tinyllama:latest"
+
+For offline (no Ollama):
+  Leave default, limited functionality
+
+================================================================================
+🐛 TROUBLESHOOTING
+================================================================================
+
+NEWSETUP not found:
+  ls -la /storage/emulated/0/NEWSETUP/
+  If not there, extract zip to /storage/emulated/0/
+
+Node not found:
+  bash ~/setup-termux-NEWSETUP.sh
+
+Port already in use:
+  LATIF_PORT=3001 bash ~/start-latif-NEWSETUP.sh
+
+Cannot connect to Ollama:
+  curl http://DESKTOP_IP:11434/api/tags
+  Check IP, firewall, WiFi connection
+
+Out of memory:
+  Edit config/android.json, use smaller model
+
+Permission denied:
+  chmod +x ~/setup-termux-NEWSETUP.sh
+
+npm errors:
+  rm -rf node_modules package-lock.json
+  npm install
+
+================================================================================
+📊 VERIFICATION CHECKLIST
+================================================================================
+
+After setup, verify:
+  ☐ Node.js: node --version (should be v18+)
+  ☐ npm: npm --version
+  ☐ NEWSETUP exists: ls -la /storage/emulated/0/NEWSETUP/
+  ☐ Symlink works: ls -la ~/latif-v5
+  ☐ Runtime dirs: ls -la ~/.latif/
+  ☐ Config exists: ls -la /storage/emulated/0/NEWSETUP/config/
+  ☐ Server starts: bash ~/start-latif-NEWSETUP.sh (Ctrl+C to stop)
+  ☐ Health check: curl http://localhost:3000/api/health
+
+================================================================================
+💡 COMMON COMMANDS
+================================================================================
+
+View logs:
+  tail -f ~/.latif/logs/latif.log
+
+Check running processes:
+  ps aux | grep node
+
+Kill LATIF:
+  pkill -f "node src/main.js"
+
+Check available storage:
+  df -h
+
+Edit configuration:
+  nano /storage/emulated/0/NEWSETUP/config/android.json
+
+List available models (with Ollama running):
+  curl http://localhost:11434/api/tags
+
+================================================================================
+📚 DOCUMENTATION
+================================================================================
+
+Quick start (5 min):
+  /storage/emulated/0/NEWSETUP/QUICK_START.md
+
+Full installation guide:
+  See NEWSETUP_INSTALL_GUIDE.md
+
+System overview:
+  /storage/emulated/0/NEWSETUP/README_REORGANIZATION.md
+
+Architecture details:
+  /storage/emulated/0/NEWSETUP/ARCHITECTURE_LAYER_STRUCTURE.md
+
+Build sequence:
+  /storage/emulated/0/NEWSETUP/IMPLEMENTATION_ORDER.md
+
+================================================================================
+🎯 NEXT STEPS
+================================================================================
+
+1. Extract zip to /storage/emulated/0/NEWSETUP
+2. Run: bash ~/setup-termux-NEWSETUP.sh
+3. Run: bash ~/configure-ollama-NEWSETUP.sh (optional)
+4. Run: bash ~/start-latif-NEWSETUP.sh
+5. Test: curl http://localhost:3000/api/health
+
+That's it! LATIF is running! 🚀
+
+================================================================================
+📞 HELP
+================================================================================
+
+Issues: Read NEWSETUP_INSTALL_GUIDE.md (troubleshooting section)
+Logs: tail -f ~/.latif/logs/latif.log
+Config: /storage/emulated/0/NEWSETUP/config/android.json
+Scripts: setup-termux-NEWSETUP.sh, start-latif-NEWSETUP.sh, configure-ollama-NEWSETUP.sh
+
+================================================================================
+Enterprise AI Operating System for Your Device
+Local • Private • Powerful
+================================================================================
