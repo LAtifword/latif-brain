@@ -1,0 +1,43 @@
+{
+  "name": "Underwave",
+  "description": "Opera GX's current design language — deep violet with crimson & cyan glow.",
+  "developer": { "name": "Latif" },
+  "manifest_version": 3,
+  "version": "1.0",
+  "mod": {
+    "license": "",
+    "schema_version": 1,
+    "payload": {
+      "theme": {
+        "dark": {
+          "gx_accent":         { "h": 347, "s": 96, "l": 55 },
+          "gx_secondary_base": { "h": 240, "s": 21, "l": 15 },
+          "gx_accent_2":       { "h": 168, "s": 100, "l": 42 }
+        },
+        "light": {
+          "gx_accent":         { "h": 347, "s": 90, "l": 50 },
+          "gx_secondary_base": { "h": 250, "s": 30, "l": 96 },
+          "gx_accent_2":       { "h": 168, "s": 80, "l": 36 }
+        }
+      },
+      "wallpaper": {
+        "dark":  { "type": "live", "source": "wallpaper.js" },
+        "light": { "type": "live", "source": "wallpaper.js" }
+      },
+      "shaders": {
+        "Midnight Glow": { "path": "shaders/midnight.frag" }
+      },
+      "background_music": [],
+      "browser_sounds": {
+        "CLICK": [], "HOVER": [], "HOVER_UP": [], "IMPORTANT_CLICK": [],
+        "FEATURE_SWITCH_ON": [], "FEATURE_SWITCH_OFF": [], "LEVEL_UPGRADE": [],
+        "LIMITER_ON": [], "LIMITER_OFF": [], "SWITCH_TOGGLE": [],
+        "TAB_INSERT": [], "TAB_CLOSE": [], "TAB_SLASH": []
+      },
+      "keyboard_sounds": {
+        "TYPING_LETTER": [], "TYPING_SPACE": [], "TYPING_BACKSPACE": [], "TYPING_ENTER": []
+      },
+      "page_styles": []
+    }
+  }
+}
