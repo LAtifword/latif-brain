@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LATIF GX Enterprise - AI Operating System</title>
+    <meta name="description" content="LATIF GX v5 - Enterprise AI Operating System with Multi-Agent Orchestration">
+    <meta name="theme-color" content="#fa1e4e">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style-enterprise.css">
+    <link rel="stylesheet" href="css/ui-components.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- MAIN CONTAINER                                            -->
+    <!-- ════════════════════════════════════════════════════════ -->
+    <div class="app-container">
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-mark">⟡</span>
+                    <span class="logo-text">LATIF GX</span>
+                </div>
+                <span class="version">v5.0</span>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-section="chat">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    <span>Chat</span>
+                </a>
+                <a href="#" class="nav-item" data-section="agents">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <circle cx="9" cy="21" r="1" fill="currentColor"/>
+                        <circle cx="20" cy="21" r="1" fill="currentColor"/>
+                        <path d="M1 10a6 6 0 0 1 12 0A6 6 0 0 1 13 10M13 10a6 6 0 0 0 6 0A6 6 0 0 0 13 10M1 10v4a4 4 0 0 0 4 4h8M13 10v4a4 4 0 0 1-4 4H1" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    <span>Agents</span>
+                </a>
+                <a href="#" class="nav-item" data-section="workflows">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <line x1="10" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="17.5" y1="10" x2="17.5" y2="14" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="10" y1="17.5" x2="14" y2="17.5" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6.5" y1="10" x2="6.5" y2="14" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span>Workflows</span>
+                </a>
+                <a href="#" class="nav-item" data-section="knowledge">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                        <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                        <circle cx="18" cy="16" r="1.5" fill="currentColor"/>
+                        <circle cx="6" cy="16" r="1.5" fill="currentColor"/>
+                        <line x1="12" y1="7.5" x2="12" y2="10.5" stroke="currentColor" stroke-width="1"/>
+                        <line x1="15.5" y1="15" x2="14" y2="13.5" stroke="currentColor" stroke-width="1"/>
+                        <line x1="8.5" y1="15" x2="10" y2="13.5" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    <span>Knowledge</span>
+                </a>
+                <a href="#" class="nav-item" data-section="monitor">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M2 17h20M9 20h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <polyline points="6 9 12 6 18 9" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <span>Monitor</span>
+                </a>
+                <a href="#" class="nav-item" data-section="settings">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-indicator" id="statusDot"></div>
+                    <div>
+                        <div class="status-title">System Status</div>
+                        <div class="status-value" id="statusText">Initializing...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="menu-toggle" id="menuToggle">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <h1 class="page-title" id="pageTitle">Chat</h1>
+                </div>
+
+                <div class="top-bar-right">
+                    <div class="search-bar">
+                        <svg class="search-icon" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <input type="search" id="searchInput" placeholder="Search conversations, agents, workflows...">
+                    </div>
+
+                    <button class="icon-btn" id="notificationBtn" title="Notifications">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                        <span class="notification-badge" id="notificationBadge">3</span>
+                    </button>
+
+                    <div class="user-menu">
+                        <button class="user-avatar" id="userBtn">
+                            <span>LA</span>
+                        </button>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <a href="#" class="dropdown-item">Profile</a>
+                            <a href="#" class="dropdown-item">API Keys</a>
+                            <a href="#" class="dropdown-item">Usage</a>
+                            <hr style="margin: 8px 0;">
+                            <a href="#" class="dropdown-item danger">Sign Out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SECTION CONTAINERS -->
+            <div class="sections-container">
+
+                <!-- CHAT SECTION -->
+                <section id="chat-section" class="section active" data-section-id="chat">
+                    <div class="chat-panel">
+                        <div class="chat-sidebar">
+                            <div class="chat-header">
+                                <h3>Conversations</h3>
+                                <button class="btn-icon" id="newChatBtn" title="New Chat">
+                                    <svg viewBox="0 0 24 24">
+                                        <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="chat-list" id="chatList">
+                                <div class="chat-item active">
+                                    <div class="chat-preview">
+                                        <div class="chat-name">Project Planning</div>
+                                        <div class="chat-summary">What are the key requirements...</div>
+                                    </div>
+                                    <div class="chat-time">2m ago</div>
+                                </div>
+                                <div class="chat-item">
+                                    <div class="chat-preview">
+                                        <div class="chat-name">Research Brief</div>
+                                        <div class="chat-summary">Analyze the following research...</div>
+                                    </div>
+                                    <div class="chat-time">1h ago</div>
+                                </div>
+                                <div class="chat-item">
+                                    <div class="chat-preview">
+                                        <div class="chat-name">Code Review</div>
+                                        <div class="chat-summary">Review this TypeScript implementation...</div>
+                                    </div>
+                                    <div class="chat-time">3h ago</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-main">
+                            <div class="messages" id="chat-messages">
+                                <div class="message-group user">
+                                    <div class="message">
+                                        <div class="message-content">Help me plan a research project about AI agents</div>
+                                        <div class="message-time">2:34 PM</div>
+                                    </div>
+                                </div>
+                                <div class="message-group assistant">
+                                    <div class="message">
+                                        <div class="message-content">
+                                            <p>I'd be happy to help you plan a research project on AI agents! Let me break this down into key phases:</p>
+                                            <ol>
+                                                <li><strong>Phase 1: Foundation</strong> - Research existing agent architectures and frameworks</li>
+                                                <li><strong>Phase 2: Design</strong> - Define your agent system requirements</li>
+                                                <li><strong>Phase 3: Implementation</strong> - Build core components and test</li>
+                                                <li><strong>Phase 4: Evaluation</strong> - Assess performance and iterate</li>
+                                            </ol>
+                                            <p>Would you like me to dive deeper into any of these phases?</p>
+                                        </div>
+                                        <div class="message-time">2:35 PM</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="chat-input-area">
+                                <div class="input-controls">
+                                    <button class="btn-icon" id="attachBtn" title="Attach Files">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M21.5 2v19c0 1.1-.9 2-2 2h-17c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14l4 4z" stroke="currentColor" stroke-width="2" fill="none"/>
+                                            <line x1="12" y1="9" x2="12" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                            <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <input type="text" id="chat-input" class="message-input" placeholder="Ask me anything... (Shift+Enter for new line)">
+                                <button class="btn-send" id="chat-send">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.8429026 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.16346272 C3.34915502,0.9 2.40734225,0.99 1.77946707,1.4870024 C0.994623095,2.1 0.837654326,3.0421956 1.15159189,3.89706233 L3.03521743,10.3380553 C3.03521743,10.4951527 3.19218622,10.6522501 3.50612381,10.6522501 L16.6915026,11.4377371 C16.6915026,11.4377371 17.1624089,11.4377371 17.1624089,12.0500645 C17.1624089,12.6623918 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AGENTS SECTION -->
+                <section id="agents-section" class="section" data-section-id="agents">
+                    <div class="agents-grid" id="agents-grid">
+                        <div class="agent-card">
+                            <div class="agent-header">
+                                <div class="agent-name">Planner Agent</div>
+                                <span class="status-badge active">Active</span>
+                            </div>
+                            <div class="agent-description">Breaks down complex tasks into actionable plans</div>
+                            <div class="agent-stats">
+                                <div class="stat">
+                                    <div class="stat-value">247</div>
+                                    <div class="stat-label">Tasks</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value">94%</div>
+                                    <div class="stat-label">Success</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary">View Details</button>
+                        </div>
+
+                        <div class="agent-card">
+                            <div class="agent-header">
+                                <div class="agent-name">Researcher Agent</div>
+                                <span class="status-badge active">Active</span>
+                            </div>
+                            <div class="agent-description">Gathers and synthesizes information from multiple sources</div>
+                            <div class="agent-stats">
+                                <div class="stat">
+                                    <div class="stat-value">156</div>
+                                    <div class="stat-label">Queries</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value">2.3s</div>
+                                    <div class="stat-label">Avg Time</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary">View Details</button>
+                        </div>
+
+                        <div class="agent-card">
+                            <div class="agent-header">
+                                <div class="agent-name">Executor Agent</div>
+                                <span class="status-badge active">Active</span>
+                            </div>
+                            <div class="agent-description">Executes planned tasks and manages workflows</div>
+                            <div class="agent-stats">
+                                <div class="stat">
+                                    <div class="stat-value">89</div>
+                                    <div class="stat-label">Executing</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value">1.2s</div>
+                                    <div class="stat-label">Avg Speed</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary">View Details</button>
+                        </div>
+
+                        <div class="agent-card">
+                            <div class="agent-header">
+                                <div class="agent-name">Critic Agent</div>
+                                <span class="status-badge active">Active</span>
+                            </div>
+                            <div class="agent-description">Evaluates outputs and provides quality feedback</div>
+                            <div class="agent-stats">
+                                <div class="stat">
+                                    <div class="stat-value">423</div>
+                                    <div class="stat-label">Reviews</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value">8.1/10</div>
+                                    <div class="stat-label">Quality</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary">View Details</button>
+                        </div>
+
+                        <div class="agent-card">
+                            <div class="agent-header">
+                                <div class="agent-name">Memory Agent</div>
+                                <span class="status-badge active">Active</span>
+                            </div>
+                            <div class="agent-description">Maintains context and learns from interactions</div>
+                            <div class="agent-stats">
+                                <div class="stat">
+                                    <div class="stat-value">2.1GB</div>
+                                    <div class="stat-label">Memory</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value">1543</div>
+                                    <div class="stat-label">Facts</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary">View Details</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- WORKFLOWS SECTION -->
+                <section id="workflows-section" class="section" data-section-id="workflows">
+                    <div class="workflows-container">
+                        <div class="workflows-header">
+                            <h2>Active Workflows</h2>
+                            <button class="btn btn-primary" id="newWorkflowBtn">+ New Workflow</button>
+                        </div>
+                        <div class="workflows-list" id="workflows-list">
+                            <div class="workflow-item">
+                                <div class="workflow-name">Research & Analysis Pipeline</div>
+                                <div class="workflow-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 65%"></div>
+                                    </div>
+                                    <span class="progress-text">65% Complete</span>
+                                </div>
+                                <div class="workflow-stats">
+                                    <span>8 tasks · 3 in progress · 5 completed</span>
+                                </div>
+                            </div>
+
+                            <div class="workflow-item">
+                                <div class="workflow-name">Content Generation & Review</div>
+                                <div class="workflow-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 40%"></div>
+                                    </div>
+                                    <span class="progress-text">40% Complete</span>
+                                </div>
+                                <div class="workflow-stats">
+                                    <span>12 tasks · 2 in progress · 3 completed</span>
+                                </div>
+                            </div>
+
+                            <div class="workflow-item">
+                                <div class="workflow-name">Data Processing & Export</div>
+                                <div class="workflow-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 100%"></div>
+                                    </div>
+                                    <span class="progress-text">100% Complete</span>
+                                </div>
+                                <div class="workflow-stats">
+                                    <span>5 tasks · 0 in progress · 5 completed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- KNOWLEDGE SECTION -->
+                <section id="knowledge-section" class="section" data-section-id="knowledge">
+                    <div class="knowledge-container">
+                        <div class="knowledge-stats" id="knowledge-stats">
+                            <div class="stat-card">
+                                <div class="stat-number">2,847</div>
+                                <div class="stat-description">Entities Mapped</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">14,592</div>
+                                <div class="stat-description">Relationships</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">94.2%</div>
+                                <div class="stat-description">Graph Density</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">523</div>
+                                <div class="stat-description">Sources</div>
+                            </div>
+                        </div>
+
+                        <div class="knowledge-graph-viz">
+                            <div class="graph-placeholder">
+                                <svg viewBox="0 0 300 200">
+                                    <!-- Central node -->
+                                    <circle cx="150" cy="100" r="15" fill="#fa1e4e"/>
+                                    <!-- Connected nodes -->
+                                    <circle cx="50" cy="60" r="10" fill="#4a90e2"/>
+                                    <circle cx="250" cy="60" r="10" fill="#4a90e2"/>
+                                    <circle cx="80" cy="140" r="10" fill="#4a90e2"/>
+                                    <circle cx="220" cy="140" r="10" fill="#4a90e2"/>
+                                    <!-- Connections -->
+                                    <line x1="150" y1="100" x2="50" y2="60" stroke="#999" stroke-width="1" opacity="0.5"/>
+                                    <line x1="150" y1="100" x2="250" y2="60" stroke="#999" stroke-width="1" opacity="0.5"/>
+                                    <line x1="150" y1="100" x2="80" y2="140" stroke="#999" stroke-width="1" opacity="0.5"/>
+                                    <line x1="150" y1="100" x2="220" y2="140" stroke="#999" stroke-width="1" opacity="0.5"/>
+                                </svg>
+                                <p>Knowledge Graph Visualization</p>
+                            </div>
+                        </div>
+
+                        <div class="recent-entities">
+                            <h3>Recent Entities</h3>
+                            <div class="entity-list" id="entities-list">
+                                <div class="entity-item">
+                                    <span class="entity-type">Person</span>
+                                    <span class="entity-name">Dr. Jane Smith</span>
+                                </div>
+                                <div class="entity-item">
+                                    <span class="entity-type">Organization</span>
+                                    <span class="entity-name">Tech Innovation Labs</span>
+                                </div>
+                                <div class="entity-item">
+                                    <span class="entity-type">Technology</span>
+                                    <span class="entity-name">Quantum Computing Framework</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MONITOR SECTION -->
+                <section id="monitor-section" class="section" data-section-id="monitor">
+                    <div class="monitor-dashboard">
+                        <div class="monitor-grid" id="system-metrics">
+                            <div class="monitor-card">
+                                <div class="card-header">CPU Usage</div>
+                                <div class="card-value">42%</div>
+                                <div class="progress-bar small">
+                                    <div class="progress-fill" style="width: 42%"></div>
+                                </div>
+                            </div>
+
+                            <div class="monitor-card">
+                                <div class="card-header">Memory Usage</div>
+                                <div class="card-value">2.3 GB</div>
+                                <div class="progress-bar small">
+                                    <div class="progress-fill" style="width: 58%"></div>
+                                </div>
+                            </div>
+
+                            <div class="monitor-card">
+                                <div class="card-header">Requests/Min</div>
+                                <div class="card-value">324</div>
+                                <div class="progress-bar small" style="background: #e8f5e9;">
+                                    <div class="progress-fill" style="width: 32%; background: #4caf50;"></div>
+                                </div>
+                            </div>
+
+                            <div class="monitor-card">
+                                <div class="card-header">Uptime</div>
+                                <div class="card-value">99.98%</div>
+                                <div class="progress-bar small" style="background: #e8f5e9;">
+                                    <div class="progress-fill" style="width: 99.98%; background: #4caf50;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-log">
+                            <h3>Recent Activity</h3>
+                            <div class="log-entries" id="activity-log">
+                                <div class="log-entry">
+                                    <span class="log-time">14:32:45</span>
+                                    <span class="log-status success">✓</span>
+                                    <span class="log-message">Workflow 'Research Pipeline' completed successfully</span>
+                                </div>
+                                <div class="log-entry">
+                                    <span class="log-time">14:25:12</span>
+                                    <span class="log-status info">ℹ</span>
+                                    <span class="log-message">Agent 'Researcher' indexed 523 new documents</span>
+                                </div>
+                                <div class="log-entry">
+                                    <span class="log-time">14:18:33</span>
+                                    <span class="log-status warning">⚠</span>
+                                    <span class="log-message">Memory usage reached 75%, optimization triggered</span>
+                                </div>
+                                <div class="log-entry">
+                                    <span class="log-time">14:10:01</span>
+                                    <span class="log-status success">✓</span>
+                                    <span class="log-message">Knowledge graph sync completed (2,847 entities)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SETTINGS SECTION -->
+                <section id="settings-section" class="section" data-section-id="settings">
+                    <div class="settings-container">
+                        <div class="settings-panel">
+                            <h2>System Settings</h2>
+
+                            <div class="settings-group">
+                                <h3>Model Configuration</h3>
+                                <div class="setting-item">
+                                    <label>Primary Model</label>
+                                    <select id="primaryModel">
+                                        <option>GPT-4</option>
+                                        <option>Claude 3 Opus</option>
+                                        <option>Llama 2 70B</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label>Temperature</label>
+                                    <input type="range" min="0" max="2" step="0.1" value="0.7">
+                                </div>
+                                <div class="setting-item">
+                                    <label>Max Tokens</label>
+                                    <input type="number" value="2048">
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <h3>Agent Settings</h3>
+                                <div class="setting-item toggle">
+                                    <label>Enable Auto-Scaling</label>
+                                    <input type="checkbox" checked>
+                                </div>
+                                <div class="setting-item toggle">
+                                    <label>Enable Knowledge Graph</label>
+                                    <input type="checkbox" checked>
+                                </div>
+                                <div class="setting-item toggle">
+                                    <label>Enable RAG</label>
+                                    <input type="checkbox" checked>
+                                </div>
+                            </div>
+
+                            <div class="settings-group">
+                                <h3>Performance</h3>
+                                <div class="setting-item">
+                                    <label>Cache TTL (minutes)</label>
+                                    <input type="number" value="30">
+                                </div>
+                                <div class="setting-item">
+                                    <label>Max Concurrent Requests</label>
+                                    <input type="number" value="10">
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" data-action="save-settings">Save Settings</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/ui-framework.js"></script>
+    <script src="js/app-enterprise.js"></script>
+</body>
+</html>
