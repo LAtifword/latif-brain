@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+data/agentos.db
+data/models/*.gguf
+.pytest_cache/
