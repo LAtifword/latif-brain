@@ -4,7 +4,11 @@
  */
 
 const LatifEnterprise = (() => {
-  const API_BASE = localStorage.getItem('latif_api_base') || `http://${localStorage.getItem('latif_host') || 'localhost'}:${localStorage.getItem('latif_port') || 11434}`;
+  // Connect to FastAPI backend server (default: localhost:8000)
+  const API_BASE = localStorage.getItem('latif_backend_url') || 'http://127.0.0.1:8000';
+
+  // Fallback to local Ollama if backend unavailable
+  const OLLAMA_BASE = localStorage.getItem('latif_ollama_url') || `http://${localStorage.getItem('latif_host') || 'localhost'}:${localStorage.getItem('latif_port') || 11434}`;
 
   const state = {
     messages: [],
@@ -67,21 +71,44 @@ const LatifEnterprise = (() => {
     UIFramework.setLoading('chat-messages', true);
 
     try {
+      // Try backend first
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
           model: localStorage.getItem('latif_model') || 'llama2',
+          temperature: parseFloat(localStorage.getItem('latif_temperature') || 0.7),
+          max_tokens: parseInt(localStorage.getItem('latif_max_tokens') || 2048),
           stream: false
         })
-      }).catch(() => ({ ok: false }));
+      }).catch(() => null);
 
-      if (response.ok) {
+      if (response && response.ok) {
         const data = await response.json();
         addMessageToChat('assistant', data.response || 'No response received');
+        UIFramework.showNotification(`Response time: ${data.processing_time.toFixed(2)}s`, 'success');
       } else {
-        addMessageToChat('system', 'Connection error. Ensure Ollama/llama.cpp is running.');
+        // Fallback to direct Ollama if backend unavailable
+        console.warn('Backend unavailable, trying direct Ollama connection...');
+        addMessageToChat('system', '⚠️ Backend server not responding. Trying direct connection...');
+
+        const ollamaResponse = await fetch(`${OLLAMA_BASE}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: localStorage.getItem('latif_model') || 'llama2',
+            prompt: message,
+            stream: false
+          })
+        }).catch(() => ({ ok: false }));
+
+        if (ollamaResponse.ok) {
+          const data = await ollamaResponse.json();
+          addMessageToChat('assistant', data.response || 'No response received');
+        } else {
+          addMessageToChat('system', '❌ Connection error. Ensure backend (port 8000) or Ollama (port 11434) is running.');
+        }
       }
     } catch (error) {
       addMessageToChat('system', `Error: ${error.message}`);
@@ -136,6 +163,16 @@ const LatifEnterprise = (() => {
     const container = document.getElementById('agents-grid');
     if (!container) return;
 
+    try {
+      const response = await fetch(`${API_BASE}/api/agents`);
+      if (response.ok) {
+        const agents = await response.json();
+        state.agents = agents;
+      }
+    } catch (error) {
+      console.warn('Could not fetch agent status:', error);
+    }
+
     container.innerHTML = state.agents.map(agent => `
       <div class="agent-card ${agent.status}">
         <div class="agent-header">
@@ -145,13 +182,14 @@ const LatifEnterprise = (() => {
         <div class="agent-stats">
           <div class="stat">
             <div class="stat-label">Tasks Completed</div>
-            <div class="stat-value">${agent.tasksCompleted}</div>
+            <div class="stat-value">${agent.tasks_completed || 0}</div>
           </div>
           <div class="stat">
             <div class="stat-label">Success Rate</div>
             <div class="stat-value">98.5%</div>
           </div>
         </div>
+        <div class="agent-description">${agent.description || ''}</div>
         <div class="agent-actions">
           <button class="btn btn-sm" onclick="LatifEnterprise.viewAgentDetails('${agent.id}')">Details</button>
           <button class="btn btn-sm" onclick="LatifEnterprise.stopAgent('${agent.id}')">Stop</button>
@@ -185,9 +223,19 @@ const LatifEnterprise = (() => {
     setInterval(refreshWorkflowStatus, 3000);
   };
 
-  const refreshWorkflowStatus = () => {
+  const refreshWorkflowStatus = async () => {
     const container = document.getElementById('workflows-list');
     if (!container) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/workflows`);
+      if (response.ok) {
+        const workflows = await response.json();
+        state.workflows = workflows;
+      }
+    } catch (error) {
+      console.warn('Could not fetch workflow status:', error);
+    }
 
     container.innerHTML = state.workflows.map(wf => `
       <div class="workflow-item">
@@ -198,10 +246,10 @@ const LatifEnterprise = (() => {
         <div class="progress-bar">
           <div class="progress-fill" style="width: ${wf.progress}%"></div>
         </div>
-        <div class="progress-text">${wf.progress}% Complete</div>
+        <div class="progress-text">${wf.progress}% Complete - Step ${wf.current_step}/${wf.total_steps}</div>
         <div class="workflow-actions">
-          <button class="btn btn-sm" onclick="LatifEnterprise.pauseWorkflow('${wf.id}')">Pause</button>
-          <button class="btn btn-sm" onclick="LatifEnterprise.cancelWorkflow('${wf.id}')">Cancel</button>
+          <button class="btn btn-sm" onclick="LatifEnterprise.pauseWorkflow('${wf.workflow_id}')">Pause</button>
+          <button class="btn btn-sm" onclick="LatifEnterprise.cancelWorkflow('${wf.workflow_id}')">Cancel</button>
         </div>
       </div>
     `).join('');
@@ -284,27 +332,42 @@ const LatifEnterprise = (() => {
     loadActivityLog();
   };
 
-  const updateMetrics = () => {
+  const updateMetrics = async () => {
     const metricsDiv = document.getElementById('system-metrics');
     if (!metricsDiv) return;
 
-    state.metrics.cpu = Math.max(10, state.metrics.cpu + (Math.random() * 20 - 10));
-    state.metrics.memory = Math.max(20, state.metrics.memory + (Math.random() * 15 - 7.5));
-    state.metrics.requestsPerMin = Math.floor(200 + Math.random() * 100);
+    try {
+      const response = await fetch(`${API_BASE}/metrics`);
+      if (response.ok) {
+        const metrics = await response.json();
+        state.metrics = {
+          cpu: metrics.cpu_percent || 0,
+          memory: metrics.memory_percent || 0,
+          requestsPerMin: metrics.requests_per_minute || 0,
+          uptime: formatUptime(metrics.uptime_seconds || 0)
+        };
+      }
+    } catch (error) {
+      console.warn('Could not fetch metrics:', error);
+      // Use simulated metrics as fallback
+      state.metrics.cpu = Math.max(10, state.metrics.cpu + (Math.random() * 20 - 10));
+      state.metrics.memory = Math.max(20, state.metrics.memory + (Math.random() * 15 - 7.5));
+      state.metrics.requestsPerMin = Math.floor(200 + Math.random() * 100);
+    }
 
     metricsDiv.innerHTML = `
       <div class="metric-card">
         <div class="metric-label">CPU Usage</div>
         <div class="metric-value">${state.metrics.cpu.toFixed(1)}%</div>
         <div class="metric-bar">
-          <div class="metric-fill" style="width: ${state.metrics.cpu}%"></div>
+          <div class="metric-fill" style="width: ${Math.min(state.metrics.cpu, 100)}%"></div>
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Memory Usage</div>
         <div class="metric-value">${state.metrics.memory.toFixed(1)}%</div>
         <div class="metric-bar">
-          <div class="metric-fill" style="width: ${state.metrics.memory}%"></div>
+          <div class="metric-fill" style="width: ${Math.min(state.metrics.memory, 100)}%"></div>
         </div>
       </div>
       <div class="metric-card">
@@ -387,6 +450,12 @@ const LatifEnterprise = (() => {
       "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
+  };
+
+  const formatUptime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
   };
 
   // ═══════════════════════════════════════════════════════════
