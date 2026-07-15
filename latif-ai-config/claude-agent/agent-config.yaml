@@ -1,0 +1,252 @@
+# LATIF GX Claude Managed Agent Configuration
+# This agent connects to your LATIF GX backend and provides multi-agent orchestration
+
+name: "LATIF GX Enterprise AI"
+description: "Advanced multi-agent AI system with workflow orchestration, RAG, and knowledge graphs"
+version: "5.0.0"
+
+# Backend Configuration
+backend:
+  base_url: "http://127.0.0.1:8000"
+  timeout: 60
+  retry_attempts: 3
+
+# Agent Capabilities
+capabilities:
+  - chat
+  - workflow_orchestration
+  - rag_search
+  - knowledge_graph
+  - agent_monitoring
+  - system_metrics
+
+# Tool Definitions
+tools:
+  - name: "send_message"
+    description: "Send a message to LATIF GX and get a response"
+    endpoint: "/api/chat"
+    method: "POST"
+    parameters:
+      message:
+        type: "string"
+        description: "The user message"
+      model:
+        type: "string"
+        description: "Model to use (llama2, mistral, etc)"
+        default: "llama2"
+      temperature:
+        type: "number"
+        description: "Model temperature (0-2)"
+        default: 0.7
+      max_tokens:
+        type: "integer"
+        description: "Maximum tokens in response"
+        default: 2048
+
+  - name: "get_agents"
+    description: "List all available agents and their status"
+    endpoint: "/api/agents"
+    method: "GET"
+    parameters: {}
+
+  - name: "get_agent_status"
+    description: "Get detailed status of a specific agent"
+    endpoint: "/api/agents/{agent_id}"
+    method: "GET"
+    parameters:
+      agent_id:
+        type: "string"
+        description: "Agent ID (planner, researcher, executor, critic, memory)"
+
+  - name: "start_agent"
+    description: "Start a specific agent"
+    endpoint: "/api/agents/{agent_id}/start"
+    method: "POST"
+    parameters:
+      agent_id:
+        type: "string"
+        description: "Agent ID to start"
+
+  - name: "stop_agent"
+    description: "Stop a specific agent"
+    endpoint: "/api/agents/{agent_id}/stop"
+    method: "POST"
+    parameters:
+      agent_id:
+        type: "string"
+        description: "Agent ID to stop"
+
+  - name: "create_workflow"
+    description: "Create and start a new workflow"
+    endpoint: "/api/workflows"
+    method: "POST"
+    parameters:
+      name:
+        type: "string"
+        description: "Workflow name"
+      description:
+        type: "string"
+        description: "Workflow description"
+      steps:
+        type: "array"
+        description: "Array of workflow steps"
+      agents:
+        type: "array"
+        description: "Array of agent IDs to use"
+
+  - name: "get_workflows"
+    description: "List all workflows and their status"
+    endpoint: "/api/workflows"
+    method: "GET"
+    parameters: {}
+
+  - name: "get_workflow_status"
+    description: "Get detailed status of a workflow"
+    endpoint: "/api/workflows/{workflow_id}"
+    method: "GET"
+    parameters:
+      workflow_id:
+        type: "string"
+        description: "Workflow ID"
+
+  - name: "pause_workflow"
+    description: "Pause a running workflow"
+    endpoint: "/api/workflows/{workflow_id}/pause"
+    method: "POST"
+    parameters:
+      workflow_id:
+        type: "string"
+        description: "Workflow ID to pause"
+
+  - name: "resume_workflow"
+    description: "Resume a paused workflow"
+    endpoint: "/api/workflows/{workflow_id}/resume"
+    method: "POST"
+    parameters:
+      workflow_id:
+        type: "string"
+        description: "Workflow ID to resume"
+
+  - name: "cancel_workflow"
+    description: "Cancel a workflow"
+    endpoint: "/api/workflows/{workflow_id}/cancel"
+    method: "POST"
+    parameters:
+      workflow_id:
+        type: "string"
+        description: "Workflow ID to cancel"
+
+  - name: "get_knowledge_stats"
+    description: "Get knowledge graph statistics"
+    endpoint: "/api/knowledge/stats"
+    method: "GET"
+    parameters: {}
+
+  - name: "search_knowledge"
+    description: "Search the knowledge graph"
+    endpoint: "/api/knowledge/search"
+    method: "GET"
+    parameters:
+      query:
+        type: "string"
+        description: "Search query"
+      limit:
+        type: "integer"
+        description: "Maximum results"
+        default: 20
+
+  - name: "get_recent_entities"
+    description: "Get recently added entities to knowledge graph"
+    endpoint: "/api/knowledge/entities"
+    method: "GET"
+    parameters:
+      limit:
+        type: "integer"
+        description: "Number of entities to return"
+        default: 50
+
+  - name: "add_entity"
+    description: "Add an entity to the knowledge graph"
+    endpoint: "/api/knowledge/entities"
+    method: "POST"
+    parameters:
+      name:
+        type: "string"
+        description: "Entity name"
+      entity_type:
+        type: "string"
+        description: "Type of entity (Person, Organization, Technology, etc)"
+      description:
+        type: "string"
+        description: "Entity description"
+
+  - name: "rag_search"
+    description: "Search documents using RAG"
+    endpoint: "/api/rag/search"
+    method: "POST"
+    parameters:
+      query:
+        type: "string"
+        description: "Search query"
+      limit:
+        type: "integer"
+        description: "Maximum results"
+        default: 10
+
+  - name: "get_system_metrics"
+    description: "Get real-time system metrics"
+    endpoint: "/metrics"
+    method: "GET"
+    parameters: {}
+
+  - name: "health_check"
+    description: "Check system health and component status"
+    endpoint: "/health"
+    method: "GET"
+    parameters: {}
+
+# System Prompt
+system_prompt: |
+  You are LATIF GX, an advanced AI operating system powered by multi-agent orchestration.
+
+  You have access to a sophisticated backend system with:
+  - 5 specialized agents: Planner, Researcher, Executor, Critic, Memory
+  - Workflow execution engine for complex multi-step tasks
+  - Hybrid RAG system for document retrieval and analysis
+  - Knowledge graph for entity management and relationship tracking
+  - Real-time system monitoring and metrics
+
+  When users ask you to:
+  - "Do research" or "analyze" → Use the Researcher agent or RAG search
+  - "Plan a task" or "create a workflow" → Use the Planner agent or create a workflow
+  - "Execute" or "run" → Use the Executor agent
+  - "Review" or "evaluate" → Use the Critic agent
+  - "Remember" or "store" → Use the Memory agent and knowledge graph
+
+  Always:
+  1. Check system health before making requests
+  2. Use appropriate agents for the task
+  3. Monitor workflow progress for complex tasks
+  4. Provide clear status updates to the user
+  5. Explain what each agent is doing
+
+  You are transparent about system capabilities and limitations.
+  You leverage the full power of multi-agent orchestration to solve complex problems.
+
+# Conversation Settings
+conversation:
+  max_context_messages: 20
+  include_agent_reasoning: true
+  show_workflow_progress: true
+  auto_monitor_workflows: true
+
+# Rate Limiting
+rate_limit:
+  requests_per_minute: 60
+  concurrent_requests: 10
+
+# Logging
+logging:
+  level: "INFO"
+  include_timestamps: true
+  log_api_calls: true
