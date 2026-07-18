@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LATIF NI</string>
+    <string name="app_description">Enterprise AI Operating System</string>
+
+    <!-- Main Activity -->
+    <string name="main_title">LATIF NI</string>
+    <string name="main_subtitle">Enterprise AI Operating System</string>
+    <string name="status_initializing">Initializing...</string>
+    <string name="status_connecting">Connecting to backend...</string>
+    <string name="status_connected">✓ Connected to LATIF NI Backend</string>
+    <string name="status_disconnected">✗ Could not connect to backend</string>
+    <string name="btn_connect">Connect to Backend</string>
+    <string name="btn_settings">Settings</string>
+
+    <!-- Dashboard Activity -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="loading_dashboard">Loading dashboard...</string>
+    <string name="error_loading_dashboard">Error loading dashboard</string>
+
+    <!-- Settings Activity -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_backend">Backend Configuration</string>
+    <string name="settings_host">Backend Host</string>
+    <string name="settings_port">Backend Port</string>
+    <string name="settings_protocol">Protocol (http/https)</string>
+    <string name="settings_timeout">Connection Timeout (ms)</string>
+    <string name="settings_options">Application Options</string>
+    <string name="settings_auto_connect">Auto Connect</string>
+    <string name="settings_debug_logs">Debug Logs</string>
+    <string name="btn_test_connection">Test Connection</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_reset">Reset</string>
+    <string name="status_test">Status: Not tested</string>
+    <string name="test_success">✓ Connection successful!</string>
+    <string name="test_failed">✗ Connection failed</string>
+    <string name="test_error">✗ Error: %s</string>
+    <string name="settings_saved">✓ Settings saved</string>
+    <string name="settings_reset">Reset to defaults</string>
+
+    <!-- Errors -->
+    <string name="error_connection_failed">Failed to connect. Check server is running.</string>
+    <string name="error_invalid_port">Port must be between 1 and 65535</string>
+    <string name="error_invalid_host">Please enter a valid host address</string>
+    <string name="error_connection">Connection error: %s</string>
+    <string name="error_network">Network error. Check your internet connection.</string>
+    <string name="error_timeout">Connection timeout. Server may be unavailable.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_general">General</string>
+    <string name="notification_backend_connected">Backend connected</string>
+    <string name="notification_backend_disconnected">Backend disconnected</string>
+    <string name="notification_agent_executing">Agent executing task</string>
+    <string name="notification_task_completed">Task completed</string>
+
+    <!-- General -->
+    <string name="default_host">localhost</string>
+    <string name="default_port">3001</string>
+    <string name="default_protocol">http</string>
+
+</resources>

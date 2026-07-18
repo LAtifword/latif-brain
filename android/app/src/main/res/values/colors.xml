@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors (Purple - LATIF Brand) -->
+    <color name="primary">#8b5cf6</color>
+    <color name="primary_dark">#7c3aed</color>
+    <color name="primary_light">#a78bfa</color>
+
+    <!-- Secondary Colors (Cyan - Accent) -->
+    <color name="secondary">#06b6d4</color>
+    <color name="secondary_dark">#0891b2</color>
+    <color name="secondary_light">#22d3ee</color>
+
+    <!-- Backgrounds -->
+    <color name="background_dark">#0f172a</color>
+    <color name="background_darker">#0a0e27</color>
+    <color name="surface">#1e293b</color>
+    <color name="surface_light">#334155</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#e2e8f0</color>
+    <color name="text_secondary">#94a3b8</color>
+    <color name="text_muted">#64748b</color>
+
+    <!-- Status Colors -->
+    <color name="status_success">#10b981</color>
+    <color name="status_warning">#f59e0b</color>
+    <color name="status_error">#ef4444</color>
+    <color name="status_info">#3b82f6</color>
+
+    <!-- Agent Colors -->
+    <color name="agent_chat">#8b5cf6</color>
+    <color name="agent_code">#3b82f6</color>
+    <color name="agent_design">#ec4899</color>
+    <color name="agent_aircraft">#06b6d4</color>
+    <color name="agent_project">#f59e0b</color>
+    <color name="agent_audio">#10b981</color>
+    <color name="agent_video">#ef4444</color>
+    <color name="agent_book">#8b5cf6</color>
+    <color name="agent_music">#06b6d4</color>
+
+    <!-- Chart Colors -->
+    <color name="chart_cpu">#f59e0b</color>
+    <color name="chart_ram">#3b82f6</color>
+    <color name="chart_gpu">#06b6d4</color>
+    <color name="chart_temp">#ef4444</color>
+
+    <!-- Utility -->
+    <color name="transparent">#00000000</color>
+    <color name="white">#ffffff</color>
+    <color name="black">#000000</color>
+    <color name="divider">#293548</color>
+
+</resources>

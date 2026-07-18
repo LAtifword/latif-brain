@@ -1,0 +1,108 @@
+// LATIF NI Android Application - App Module Build Gradle
+// Configures the main application module with all dependencies
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace "com.latif.ni"
+    compileSdk rootProject.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.latif.ni"
+        minSdk rootProject.minSdkVersion
+        targetSdk rootProject.targetSdkVersion
+        versionCode 1
+        versionName "5.0.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "BACKEND_HOST", '"localhost"'
+        buildConfigField "int", "BACKEND_PORT", '3001'
+        buildConfigField "String", "BACKEND_PROTOCOL", '"http"'
+        buildConfigField "String", "WS_PROTOCOL", '"ws"'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            buildConfigField "String", "BACKEND_HOST", '"192.168.1.100"'  // Update to your network IP
+        }
+
+        debug {
+            minifyEnabled false
+            buildConfigField "String", "BACKEND_HOST", '"localhost"'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+    }
+
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+}
+
+dependencies {
+    // AndroidX Core
+    implementation "androidx.appcompat:appcompat:$rootProject.appcompat_version"
+    implementation "androidx.constraintlayout:constraintlayout:$rootProject.constraint_version"
+    implementation "com.google.android.material:material:$rootProject.material_version"
+
+    // Lifecycle & ViewModel
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$rootProject.lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$rootProject.lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$rootProject.lifecycle_version"
+
+    // Kotlin Coroutines
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$rootProject.coroutines_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$rootProject.coroutines_version"
+
+    // Networking - Retrofit + OkHttp
+    implementation "com.squareup.retrofit2:retrofit:$rootProject.retrofit_version"
+    implementation "com.squareup.retrofit2:converter-gson:$rootProject.retrofit_version"
+    implementation "com.squareup.okhttp3:okhttp:$rootProject.okhttp_version"
+    implementation "com.squareup.okhttp3:logging-interceptor:$rootProject.okhttp_version"
+
+    // JSON
+    implementation "com.google.code.gson:gson:$rootProject.gson_version"
+
+    // WebSocket
+    implementation "com.squareup.okhttp3:okhttp-urlconnection:$rootProject.okhttp_version"
+
+    // Database - Room
+    implementation "androidx.room:room-runtime:2.6.1"
+    implementation "androidx.room:room-ktx:2.6.1"
+    implementation "androidx.room:room-rxjava3:2.6.1"
+
+    // Preferences DataStore
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
+
+    // Permissions
+    implementation "com.google.android.gms:play-services-oss-licenses:17.0.1"
+
+    // Logging
+    implementation "com.jakewharton.timber:timber:5.0.1"
+
+    // Testing
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
