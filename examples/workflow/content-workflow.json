@@ -1,0 +1,10 @@
+{
+  "name": "Content Generation Workflow",
+  "nodes": [
+    {"id": "ideate", "type": "task"},
+    {"id": "draft", "type": "task"},
+    {"id": "review", "type": "task"},
+    {"id": "publish", "type": "task"}
+  ],
+  "edges": []
+}

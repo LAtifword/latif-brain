@@ -1,0 +1,141 @@
+{
+  "name": "latif-ai-os",
+  "version": "5.0.0",
+  "description": "Enterprise-grade AI Operating System - LATIF v5",
+  "main": "src/core/ai-core.js",
+  "type": "module",
+  "bin": {
+    "latif-cli": "tools/cli/latif-cli.js"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "NODE_ENV=development node src/main.js",
+    "backend": "node src/services/LATIF-NI-BACKEND-SERVICE.js",
+    "dashboard": "node src/main.js && echo '\\n✓ Dashboard available at http://localhost:3001'",
+    "dev:full": "concurrently --kill-others \"npm start\" \"npm run backend\" || npm start",
+    "build": "node tools/build.js",
+    "package": "node tools/package.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/e2e",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "docs": "node tools/generate-docs.js",
+    "lint": "eslint src tests tools",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"tools/**/*.js\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "node tools/setup.js"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "rag",
+    "agents",
+    "knowledge-graph",
+    "workflow",
+    "plugin-system",
+    "enterprise",
+    "nodejs"
+  ],
+  "author": "LATIF Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LAtifword/latif-brain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LAtifword/latif-brain/issues"
+  },
+  "homepage": "https://github.com/LAtifword/latif-brain#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "exports": {
+    ".": "./src/core/ai-core.js",
+    "./sdk": "./src/sdk/index.js",
+    "./api": "./src/api/rest-server.js",
+    "./plugins": "./src/plugins/plugin-loader.js",
+    "./types": "./src/types/index.d.ts"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "bull": "^4.11.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.0",
+    "helmet": "^7.0.0",
+    "joi": "^17.0.0",
+    "openai": "^6.48.0",
+    "pino": "^8.0.0",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0",
+    "ws": "^8.14.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "@types/node": "^20.0.0",
+    "archiver": "^8.0.0",
+    "babel-jest": "^29.0.0",
+    "eslint": "^8.43.0",
+    "jest": "^29.0.0",
+    "prettier": "^2.8.0",
+    "typescript": "^5.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^4.15.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.jsx?$": "babel-jest"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.d.ts",
+      "!src/**/index.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 70,
+        "lines": 70,
+        "statements": 70
+      }
+    }
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "node": "18"
+          }
+        }
+      ]
+    ]
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2021": true,
+      "jest": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": 12,
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "warn",
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ]
+    }
+  }
+}

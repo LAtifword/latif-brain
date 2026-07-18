@@ -1,0 +1,169 @@
+/* ════════════════════════════════════════════════════════════════
+   LATIF AI — GX MOD LAYER (v2)
+   Loaded alongside style.css + gx-design.css. Inert until
+   <html class="gx-active">. js/mod-engine.js injects --gx-*-color
+   custom properties from a mod's real Opera-schema theme HSL; this
+   file remaps them onto the app's native design tokens so the ENTIRE
+   existing UI transforms, then layers on glass + depth + glow.
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Fallbacks — overridden per-mod by the engine from theme.<variant> HSL */
+  --gx-accent-color:    hsl(347, 96%, 55%);
+  --gx-accent2-color:   hsl(168, 100%, 42%);
+  --gx-bg-color:        hsl(240, 21%, 15%);
+  --gx-bg-elev-color:   hsl(240, 21%, 21%);
+  --gx-bg-deep-color:   hsl(240, 20%, 5%);
+  --gx-surface-color:   hsla(240, 21%, 21%, 0.6);
+  --gx-text-color:      hsl(0, 0%, 90%);
+  --gx-text2-color:     hsl(0, 0%, 70%);
+  --gx-border-color:    rgba(250, 30, 78, 0.30);
+  --gx-glow-color:      rgba(250, 30, 78, 0.35);
+  --gx-blur: 12px;
+}
+
+/* ─── Remap native tokens → mod theme when a mod is active ─── */
+html.gx-active {
+  --bg:              var(--gx-bg-deep-color);
+  --surface:         var(--gx-bg-color);
+  --surface2:        var(--gx-surface-color);
+  --surface3:        var(--gx-surface-color);
+  --surface-elevated: var(--gx-bg-elev-color);
+  --border:          var(--gx-border-color);
+  --border-strong:   var(--gx-border-color);
+  --text:            var(--gx-text-color);
+  --text-dim:        var(--gx-text2-color);
+  --text-faint:      var(--gx-text2-color);
+  --gold:            var(--gx-accent-color);
+  --gold2:           var(--gx-accent2-color);
+  --amber:           var(--gx-accent-color);
+  --accent:          var(--gx-accent2-color);
+  --bubble-user:     var(--gx-surface-color);
+}
+
+html.gx-active body { background: transparent; }
+html.gx-active { background: var(--gx-bg-deep-color); }
+#gx-live-wallpaper { will-change: transform; }
+
+html.gx-active body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 200px rgba(0,0,0,0.4);
+}
+html.gx-active .topbar,
+html.gx-active .chat-scroll,
+html.gx-active .input-stage { position: relative; z-index: 1; }
+
+/* ─── Glassmorphism on the app's real surfaces ─── */
+html.gx-active .input-bar,
+html.gx-active .dropdown-sheet,
+html.gx-active .attach-sheet,
+html.gx-active .drawer,
+html.gx-active .modal,
+html.gx-active .toast,
+html.gx-active .msg-row.user .bubble {
+  background: var(--gx-surface-color);
+  -webkit-backdrop-filter: blur(var(--gx-blur));
+  backdrop-filter: blur(var(--gx-blur));
+  border: 1px solid var(--gx-border-color);
+}
+
+html.gx-active .topbar {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--gx-bg-deep-color) 85%, transparent), transparent);
+  -webkit-backdrop-filter: blur(calc(var(--gx-blur) * 0.6));
+  backdrop-filter: blur(calc(var(--gx-blur) * 0.6));
+}
+html.gx-active .input-stage {
+  background: linear-gradient(0deg,
+    color-mix(in srgb, var(--gx-bg-deep-color) 90%, transparent), transparent);
+}
+
+/* ─── Dynamic depth: elevation + colored glow ─── */
+html.gx-active .drawer          { box-shadow: 20px 0 60px rgba(0,0,0,0.5), 0 0 40px var(--gx-glow-color); }
+html.gx-active .modal,
+html.gx-active .attach-sheet    { box-shadow: 0 -8px 40px rgba(0,0,0,0.5), 0 0 60px var(--gx-glow-color); }
+html.gx-active .dropdown-sheet  { box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 24px var(--gx-glow-color); }
+html.gx-active .input-bar:focus-within {
+  border-color: var(--gx-accent-color);
+  box-shadow: 0 0 0 1px var(--gx-accent-color), 0 0 24px var(--gx-glow-color);
+}
+html.gx-active .send-btn:not(:disabled) { box-shadow: 0 0 18px var(--gx-glow-color); }
+
+html.gx-active .brand-word {
+  background: linear-gradient(135deg, var(--gx-accent-color), var(--gx-accent2-color));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px var(--gx-glow-color));
+}
+html.gx-active .suggest-chip:hover,
+html.gx-active .suggest-chip:active {
+  border-color: var(--gx-accent-color);
+  box-shadow: 0 0 16px var(--gx-glow-color);
+}
+html.gx-active .dot.online { background: var(--gx-accent2-color); box-shadow: 0 0 8px var(--gx-accent2-color); }
+html.gx-active ::-webkit-scrollbar-thumb { background: var(--gx-accent-color); box-shadow: 0 0 6px var(--gx-glow-color); }
+
+/* ─── Focus Mode: dim chrome, sharpen conversation ─── */
+html.gx-focus-mode .topbar,
+html.gx-focus-mode .input-stage .disclaimer,
+html.gx-focus-mode .drawer { opacity: 0.35; transition: opacity .3s; }
+html.gx-focus-mode .chat-scroll { filter: contrast(1.06) brightness(1.02); }
+html.gx-focus-mode body::after { box-shadow: inset 0 0 260px rgba(0,0,0,0.6); }
+
+/* ════════════════════════════════════════════════════════════════
+   Reusable GX primitives
+   ════════════════════════════════════════════════════════════════ */
+.gx-panel {
+  background: var(--gx-surface-color);
+  -webkit-backdrop-filter: blur(var(--gx-blur));
+  backdrop-filter: blur(var(--gx-blur));
+  border: 1px solid var(--gx-border-color);
+  border-radius: 16px; padding: 20px; position: relative; overflow: hidden;
+}
+.gx-elevation-1 { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.gx-elevation-2 { box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 20px var(--gx-glow-color); }
+.gx-elevation-3 {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 40px var(--gx-glow-color),
+              inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.gx-btn {
+  background: linear-gradient(135deg, var(--gx-accent-color), var(--gx-accent2-color));
+  border: none; border-radius: 12px; padding: 12px 24px; color: #fff;
+  font-weight: 600; cursor: pointer; position: relative; overflow: hidden;
+  transition: all .3s ease;
+}
+.gx-btn::before {
+  content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  transition: left .5s;
+}
+.gx-btn:hover::before { left: 100%; }
+.gx-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--gx-glow-color); }
+
+.gx-border-glow { position: relative; }
+.gx-border-glow::after {
+  content: ""; position: absolute; inset: -2px; border-radius: inherit; padding: 2px;
+  background: linear-gradient(45deg, var(--gx-accent-color), var(--gx-accent2-color), var(--gx-accent-color));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: gxBorderRotate 4s linear infinite;
+  opacity: .6; pointer-events: none;
+}
+@keyframes gxBorderRotate { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+
+/* ─── Settings: Mods panel controls ─── */
+.mod-grid { display: flex; flex-direction: column; gap: 8px; }
+.mod-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border);
+  background: var(--surface3); color: var(--text); position: relative; overflow: hidden;
+}
+.mod-card.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 18px var(--gx-glow-color); }
+.mod-swatch { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
+.mod-meta { flex: 1; min-width: 0; }
+.mod-name { font-weight: 700; font-size: 14px; }
+.mod-desc { font-size: 11.5px; color: var(--text-faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-check { color: var(--gold); flex-shrink: 0; opacity: 0; }
+.mod-card.active .mod-check { opacity: 1; }

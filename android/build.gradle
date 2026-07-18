@@ -1,0 +1,54 @@
+// LATIF NI Android Application - Root Build Gradle
+// Handles dependencies and versioning for the entire Android app
+
+buildscript {
+    ext {
+        compileSdkVersion = 34
+        minSdkVersion = 26
+        targetSdkVersion = 34
+        kotlin_version = '1.9.0'
+        gradle_version = '8.1.0'
+
+        // Dependency versions
+        appcompat_version = '1.6.1'
+        material_version = '1.10.0'
+        constraint_version = '2.1.4'
+        lifecycle_version = '2.6.2'
+        coroutines_version = '1.7.3'
+        okhttp_version = '4.11.0'
+        retrofit_version = '2.10.0'
+        gson_version = '2.10.1'
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "com.android.tools.build:gradle:$gradle_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+plugins {
+    id 'com.android.application' version '8.1.0' apply false
+    id 'com.android.library' version '8.1.0' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Root task to build the Android application
+task buildAndroid {
+    dependsOn ':app:assembleRelease'
+    doLast {
+        println "✓ LATIF NI Android Application built successfully"
+        println "  APK: app/build/outputs/apk/release/app-release.apk"
+    }
+}
