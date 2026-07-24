@@ -1,0 +1,163 @@
+{
+  "title": "العين التي بقيت مفتوحة",
+  "subtitle": "رواية فلسفية",
+  "author": "تأليف: محمد لطيف",
+  "dedication": "إلى الذين رأوا ما لا يُراد له أن يُرى، ثم اضطروا إلى العيش كأنهم لم يروا شيئًا.",
+  "sections": [
+    {
+      "file": "01.txt",
+      "part": null,
+      "heading": "تمهيد: النافذة البيضاء",
+      "paragraphs": 18,
+      "word_count": 513
+    },
+    {
+      "file": "02.txt",
+      "part": "الجزء الأول: مدينة الأصنام",
+      "heading": "الفصل الأول: مدينة لا تنام إلا واقفة",
+      "paragraphs": 53,
+      "word_count": 994
+    },
+    {
+      "file": "03.txt",
+      "part": null,
+      "heading": "الفصل الثاني: المرأة التي ترسم ما وراء الوجوه",
+      "paragraphs": 48,
+      "word_count": 674
+    },
+    {
+      "file": "04.txt",
+      "part": null,
+      "heading": "الفصل الثالث: كتاب الجرح",
+      "paragraphs": 37,
+      "word_count": 571
+    },
+    {
+      "file": "05.txt",
+      "part": null,
+      "heading": "الفصل الرابع: معبد العقل",
+      "paragraphs": 41,
+      "word_count": 518
+    },
+    {
+      "file": "06.txt",
+      "part": "الجزء الثاني: العمى الأبيض",
+      "heading": "الفصل الخامس: حين صار العالم بلا حواف",
+      "paragraphs": 42,
+      "word_count": 721
+    },
+    {
+      "file": "07.txt",
+      "part": null,
+      "heading": "الفصل السادس: مدرسة الفضيلة",
+      "paragraphs": 57,
+      "word_count": 780
+    },
+    {
+      "file": "08.txt",
+      "part": null,
+      "heading": "الفصل السابع: أبرد الوحوش",
+      "paragraphs": 42,
+      "word_count": 557
+    },
+    {
+      "file": "09.txt",
+      "part": null,
+      "heading": "الفصل الثامن: المبصران",
+      "paragraphs": 52,
+      "word_count": 553
+    },
+    {
+      "file": "10.txt",
+      "part": "الجزء الثالث: اللغة التي فقدت أسماءها",
+      "heading": "الفصل التاسع: جناح الكلمات",
+      "paragraphs": 49,
+      "word_count": 651
+    },
+    {
+      "file": "11.txt",
+      "part": null,
+      "heading": "الفصل العاشر: وجه المدينة الممزق",
+      "paragraphs": 46,
+      "word_count": 630
+    },
+    {
+      "file": "12.txt",
+      "part": null,
+      "heading": "الفصل الحادي عشر: الطبيبة التي لا تؤمن بالشفاء",
+      "paragraphs": 39,
+      "word_count": 587
+    },
+    {
+      "file": "13.txt",
+      "part": null,
+      "heading": "الفصل الثاني عشر: متحف التقدم",
+      "paragraphs": 57,
+      "word_count": 726
+    },
+    {
+      "file": "14.txt",
+      "part": "الجزء الرابع: المرآة والهاوية",
+      "heading": "الفصل الثالث عشر: الحقيقة التي لم تجد عينًا",
+      "paragraphs": 35,
+      "word_count": 529
+    },
+    {
+      "file": "15.txt",
+      "part": null,
+      "heading": "الفصل الرابع عشر: انتفاضة المرايا",
+      "paragraphs": 30,
+      "word_count": 434
+    },
+    {
+      "file": "16.txt",
+      "part": null,
+      "heading": "الفصل الخامس عشر: الرجل الذي صار أعمى",
+      "paragraphs": 45,
+      "word_count": 481
+    },
+    {
+      "file": "17.txt",
+      "part": null,
+      "heading": "الفصل السادس عشر: الصنم الأخير",
+      "paragraphs": 35,
+      "word_count": 465
+    },
+    {
+      "file": "18.txt",
+      "part": "الجزء الخامس: ما بعد الضوء",
+      "heading": "الفصل السابع عشر: حريق اللغة",
+      "paragraphs": 39,
+      "word_count": 557
+    },
+    {
+      "file": "19.txt",
+      "part": null,
+      "heading": "الفصل الثامن عشر: برج الوضوح",
+      "paragraphs": 45,
+      "word_count": 637
+    },
+    {
+      "file": "20.txt",
+      "part": null,
+      "heading": "الفصل التاسع عشر: العين التي بقيت مفتوحة",
+      "paragraphs": 67,
+      "word_count": 798
+    },
+    {
+      "file": "21.txt",
+      "part": null,
+      "heading": "الفصل العشرون: مدينة بلا اسم",
+      "paragraphs": 44,
+      "word_count": 804
+    },
+    {
+      "file": "22.txt",
+      "part": null,
+      "heading": "خاتمة: بعد سنوات",
+      "paragraphs": 46,
+      "word_count": 596
+    }
+  ],
+  "total_word_count": 13776
+}

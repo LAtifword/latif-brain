@@ -53,3 +53,13 @@ plugins/.temp/
 # OS
 Thumbs.db
 .DS_Store
+
+# Audiobook pipeline: rendered audio and voice reference clips never get committed
+tools/audiobook/out/
+tools/audiobook/**/*.wav
+tools/audiobook/**/*.mp3
+tools/audiobook/**/reference*.wav
+
+# Python
+__pycache__/
+*.pyc
