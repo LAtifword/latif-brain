@@ -3,7 +3,7 @@ LATIF GX Enterprise Backend Server
 FastAPI-based multi-agent orchestration platform
 """
 
-from fastapi import FastAPI, WebSocket, HTTPException, UploadFile, File
+from fastapi import FastAPI, WebSocket, HTTPException, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ import logging
 from datetime import datetime
 import psutil
 import uuid
+import time
 
 from agents.orchestrator import AgentOrchestrator
 from agents.planner import PlannerAgent
@@ -23,9 +24,14 @@ from agents.critic import CriticAgent
 from agents.memory import MemoryAgent
 from workflows.engine import WorkflowEngine
 from rag.hybrid_rag import HybridRAG
+from rag.hybrid_rag_v2 import HybridRAGv2
 from knowledge.graph import KnowledgeGraph
 from monitoring.metrics import MetricsCollector
 from config import settings
+from features import (
+    vector_db, output_manager, cost_optimizer, semantic_cache,
+    prompt_cache, rate_limiter, fallback_manager
+)
 
 # Logging setup
 logging.basicConfig(
@@ -111,6 +117,26 @@ class EntityData(BaseModel):
     description: Optional[str] = None
     properties: Optional[Dict[str, Any]] = None
 
+class StructuredOutputRequest(BaseModel):
+    task: str
+    output_format: str = "json"
+    schema: Optional[Dict[str, Any]] = None
+
+class CostOptimizationRequest(BaseModel):
+    prompt: str
+    available_models: List[str]
+    required_quality: float = 0.7
+    budget_per_request: Optional[float] = None
+
+class VectorSearchRequest(BaseModel):
+    text: str
+    limit: int = 10
+    metadata_filter: Optional[Dict[str, Any]] = None
+
+class SemanticCacheRequest(BaseModel):
+    query: str
+    similarity_threshold: float = 0.85
+
 # ═══════════════════════════════════════════════════════════
 # GLOBAL STATE
 # ═══════════════════════════════════════════════════════════
@@ -118,10 +144,12 @@ class EntityData(BaseModel):
 orchestrator = None
 workflow_engine = None
 rag_system = None
+rag_system_v2 = None
 knowledge_graph = None
 metrics_collector = None
 active_sessions = {}
 websocket_connections = []
+# Advanced features already imported and initialized
 
 # ═══════════════════════════════════════════════════════════
 # STARTUP & SHUTDOWN
@@ -129,21 +157,35 @@ websocket_connections = []
 
 @app.on_event("startup")
 async def startup_event():
-    global orchestrator, workflow_engine, rag_system, knowledge_graph, metrics_collector
+    global orchestrator, workflow_engine, rag_system, rag_system_v2, knowledge_graph, metrics_collector
 
-    logger.info("🚀 Starting LATIF GX Enterprise Server...")
+    logger.info("🚀 Starting LATIF GX Enterprise Server (v5.1.0 - Advanced Features)...")
 
     try:
-        # Initialize components
+        # Initialize core components
         orchestrator = AgentOrchestrator()
         await orchestrator.initialize()
 
         workflow_engine = WorkflowEngine()
         rag_system = HybridRAG()
+        rag_system_v2 = HybridRAGv2()  # RAG v2 with hybrid search
         knowledge_graph = KnowledgeGraph()
         metrics_collector = MetricsCollector()
 
-        logger.info("✅ All components initialized successfully")
+        # Initialize advanced features
+        logger.info("📊 Initializing advanced features...")
+
+        # Register model fallback chains
+        await fallback_manager.check_all_models()
+        logger.info("✅ Model fallback chains initialized")
+
+        # Initialize prompt cache
+        logger.info("✅ Semantic caching initialized")
+
+        # Initialize rate limiter
+        logger.info("✅ Advanced rate limiting initialized")
+
+        logger.info("✅ All components and advanced features initialized successfully")
 
     except Exception as e:
         logger.error(f"❌ Startup failed: {e}")
@@ -189,36 +231,72 @@ async def get_metrics() -> SystemMetrics:
 # ═══════════════════════════════════════════════════════════
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """Send a message and get a response"""
+async def chat(request: ChatRequest, client_id: Optional[str] = Header(None)):
+    """Send a message and get a response with advanced features"""
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Server not ready")
 
+    client = client_id or "anonymous"
     session_id = request.session_id or str(uuid.uuid4())
-    start_time = datetime.now()
+    start_time = time.time()
 
-    try:
-        # Use orchestrator to process message
-        response = await orchestrator.process_message(
-            message=request.message,
-            model=request.model,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            session_id=session_id
+    # Check rate limit
+    allowed, retry_after, remaining = rate_limiter.check_rate_limit(client)
+    if not allowed:
+        logger.warning(f"Rate limit exceeded for client: {client}")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Retry after {retry_after:.1f} seconds",
+            headers={"Retry-After": str(int(retry_after))}
         )
 
-        processing_time = (datetime.now() - start_time).total_seconds()
+    try:
+        # Try semantic cache first
+        cached_response, was_hit, similarity = await semantic_cache.get_or_compute(
+            request.message,
+            lambda: orchestrator.process_message(
+                request.message,
+                request.model,
+                request.temperature,
+                request.max_tokens,
+                session_id
+            ),
+            similarity_threshold=0.80
+        )
+
+        latency_ms = (time.time() - start_time) * 1000
+
+        # Record cost and metrics
+        metrics = cost_optimizer.get_token_metrics(
+            request.message,
+            cached_response.get("content", ""),
+            request.model
+        )
+
+        cost_optimizer.record_usage(
+            request.model,
+            metrics.prompt_tokens,
+            metrics.completion_tokens,
+            latency_ms,
+            0.85 if was_hit else 0.9  # Cache hit gets quality boost
+        )
+
+        rate_limiter.release_request(client)
 
         return ChatResponse(
-            response=response.get("content", ""),
+            response=cached_response.get("content", ""),
             session_id=session_id,
-            tokens_used=response.get("tokens_used", 0),
-            processing_time=processing_time,
+            tokens_used=metrics.total_tokens,
+            processing_time=latency_ms / 1000,
             model=request.model
         )
 
+    except HTTPException:
+        rate_limiter.release_request(client)
+        raise
     except Exception as e:
         logger.error(f"Chat error: {e}")
+        rate_limiter.release_request(client)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat/stream")
@@ -248,6 +326,168 @@ async def chat_stream(request: ChatRequest):
             yield json.dumps({"error": str(e)}) + "\n"
 
     return generate()
+
+# ═══════════════════════════════════════════════════════════
+# ADVANCED FEATURES API
+# ═══════════════════════════════════════════════════════════
+
+@app.get("/api/features/status")
+async def get_features_status():
+    """Get status of all advanced features"""
+    return {
+        "vector_db": {"enabled": True, "backend": vector_db.backend_type},
+        "structured_output": {"enabled": True, "functions": len(output_manager.functions)},
+        "cost_optimization": {"enabled": True, "tracked_models": len(cost_optimizer.model_performance)},
+        "semantic_cache": {"enabled": True, "cache_stats": semantic_cache.get_stats()},
+        "rate_limiting": {"enabled": True, "limits": rate_limiter.get_global_stats()},
+        "model_fallback": {"enabled": True, "chains": list(fallback_manager.chains.keys())},
+        "rag_v2": {"enabled": True}
+    }
+
+@app.post("/api/features/structured-output")
+async def generate_structured_output(request: StructuredOutputRequest):
+    """Generate structured output with validation"""
+    try:
+        prompt = output_manager.create_structured_prompt(
+            task=request.task,
+            output_format=request.output_format,
+            schema=request.schema
+        )
+
+        # Use cached prompt completion if available
+        response, hit = await prompt_cache.get_completion(
+            prompt,
+            lambda: orchestrator.process_message(prompt, "llama2", 0.7, 2048, str(uuid.uuid4()))
+        )
+
+        # Process structured response
+        result = await output_manager.process_structured_response(
+            response.get("content", ""),
+            request.output_format,
+            request.schema
+        )
+
+        return {
+            "success": True,
+            "cache_hit": hit,
+            "output": result
+        }
+
+    except Exception as e:
+        logger.error(f"Structured output error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/features/optimize-cost")
+async def optimize_costs(request: CostOptimizationRequest):
+    """Select optimal model for request"""
+    try:
+        # Get token metrics for prompt
+        metrics = cost_optimizer.get_token_metrics(
+            request.prompt,
+            "",
+            "llama2"
+        )
+
+        # Select optimal model
+        optimal_model = cost_optimizer.select_optimal_model(
+            request.available_models,
+            request.required_quality,
+            request.budget_per_request
+        )
+
+        # Get cost breakdown
+        cost_summary = cost_optimizer.get_cost_summary(hours=24)
+        performance = cost_optimizer.get_performance_report()
+
+        return {
+            "recommended_model": optimal_model,
+            "prompt_tokens": metrics.prompt_tokens,
+            "estimated_cost": metrics.cost,
+            "cost_summary": cost_summary,
+            "model_performance": performance
+        }
+
+    except Exception as e:
+        logger.error(f"Cost optimization error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/features/vector-search")
+async def vector_search(request: VectorSearchRequest):
+    """Search using vector embeddings"""
+    try:
+        # Embed query text (simplified)
+        query_embedding = [0.5] * 128  # Placeholder - would use real embedding in production
+
+        results = await vector_db.search_embeddings(query_embedding, request.limit)
+
+        return {
+            "query": request.text,
+            "results": results,
+            "count": len(results),
+            "backend": vector_db.backend_type
+        }
+
+    except Exception as e:
+        logger.error(f"Vector search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/features/cache/stats")
+async def get_cache_stats():
+    """Get semantic cache statistics"""
+    return {
+        "semantic_cache": semantic_cache.get_stats(),
+        "prompt_cache": prompt_cache.get_stats()
+    }
+
+@app.post("/api/features/cache/invalidate")
+async def invalidate_cache(query: Optional[str] = None):
+    """Invalidate cache entries"""
+    if query:
+        semantic_cache.invalidate(query)
+        return {"status": "invalidated", "query": query}
+    else:
+        semantic_cache.invalidate()
+        prompt_cache.clear()
+        return {"status": "all_caches_cleared"}
+
+@app.get("/api/features/rate-limit/quota")
+async def get_rate_limit_quota(client_id: str = Header(None)):
+    """Get rate limit quota for client"""
+    client = client_id or "anonymous"
+    return rate_limiter.get_client_quota(client)
+
+@app.get("/api/features/models/fallback")
+async def get_fallback_chains():
+    """Get all model fallback chains and status"""
+    chains_status = {}
+    for chain_name in fallback_manager.chains:
+        chains_status[chain_name] = fallback_manager.get_chain_status(chain_name)
+
+    return {
+        "chains": chains_status,
+        "all_models": fallback_manager.get_status()
+    }
+
+@app.post("/api/features/models/select")
+async def select_model_from_chain(
+    chain_name: str = "balanced",
+    min_quality: float = 0.5
+):
+    """Select best available model from fallback chain"""
+    model = await fallback_manager.select_model(chain_name, min_quality)
+
+    if not model:
+        raise HTTPException(status_code=503, detail=f"No healthy model found in chain '{chain_name}'")
+
+    return {"selected_model": model, "chain": chain_name}
+
+@app.get("/api/features/rag-v2/stats")
+async def get_rag_v2_stats():
+    """Get RAG v2 hybrid search engine statistics"""
+    if not rag_system_v2:
+        raise HTTPException(status_code=503, detail="RAG v2 not ready")
+
+    return rag_system_v2.get_stats()
 
 # ═══════════════════════════════════════════════════════════
 # AGENTS API
@@ -456,7 +696,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.post("/api/rag/search")
 async def rag_search(query: str, limit: int = 10):
-    """Search documents via RAG"""
+    """Search documents via RAG (v1)"""
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG system not ready")
 
@@ -465,11 +705,48 @@ async def rag_search(query: str, limit: int = 10):
         return {
             "query": query,
             "results": results,
-            "count": len(results)
+            "count": len(results),
+            "version": "v1"
         }
 
     except Exception as e:
         logger.error(f"RAG search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/rag/search-v2")
+async def rag_search_v2(
+    query: str,
+    limit: int = 10,
+    alpha: float = 0.5,
+    metadata_filter: Optional[Dict[str, Any]] = None
+):
+    """Advanced hybrid search via RAG v2 (BM25 + Semantic)"""
+    if not rag_system_v2:
+        raise HTTPException(status_code=503, detail="RAG v2 not ready")
+
+    try:
+        results = rag_system_v2.search(query, limit, alpha, metadata_filter)
+
+        return {
+            "query": query,
+            "results": [
+                {
+                    "doc_id": r.doc_id,
+                    "title": r.title,
+                    "content": r.content[:500],  # Truncate for response
+                    "metadata": r.metadata,
+                    "relevance_score": r.relevance_score,
+                    "search_type": r.search_type
+                }
+                for r in results
+            ],
+            "count": len(results),
+            "version": "v2",
+            "hybrid_ratio": {"bm25": alpha, "semantic": 1 - alpha}
+        }
+
+    except Exception as e:
+        logger.error(f"RAG v2 search error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ═══════════════════════════════════════════════════════════
