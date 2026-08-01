@@ -5,6 +5,7 @@
 
 import { loggerProxy as logger } from '../core/logger.js';
 import { getConfig } from '../core/config.js';
+import { getOfflineCache } from '../core/offline-cache.js';
 
 class AICore {
   constructor() {
@@ -170,7 +171,7 @@ class AICore {
         return this.handleStreamingResponse(response);
       } else {
         const data = await response.json();
-        return {
+        const result = {
           model: data.model || model,
           content: data.message?.content || '',
           stopReason: data.done ? 'stop' : 'length',
@@ -178,11 +179,34 @@ class AICore {
             prompt: data.prompt_eval_count || 0,
             completion: data.eval_count || 0,
             total: (data.prompt_eval_count || 0) + (data.eval_count || 0)
-          }
+          },
+          fromCache: false
         };
+
+        // Cache response for offline fallback
+        try {
+          const cache = await getOfflineCache();
+          await cache.saveChatResponse(messages, model, result.content);
+        } catch (cacheError) {
+          logger.debug('Failed to cache response', { error: cacheError.message });
+        }
+
+        return result;
       }
     } catch (error) {
       logger.error('Chat failed', { error: error.message });
+
+      // Try offline cache fallback
+      try {
+        const cached = await this.searchOfflineCache(messages);
+        if (cached) {
+          logger.info('Using cached response (offline mode)');
+          return cached;
+        }
+      } catch (cacheError) {
+        logger.debug('Offline cache search failed', { error: cacheError.message });
+      }
+
       // Attempt re-detection on error
       this.serverAvailable = false;
       await this.autoDetectServer();
@@ -387,6 +411,41 @@ class AICore {
 
   isServerAvailable() {
     return this.serverAvailable;
+  }
+
+  async searchOfflineCache(messages) {
+    try {
+      if (messages.length === 0) return null;
+
+      const lastUserMessage = messages[messages.length - 1]?.content || '';
+      if (!lastUserMessage) return null;
+
+      const cache = await getOfflineCache();
+      const results = await cache.searchCache(lastUserMessage, this.model, 0.5);
+
+      if (results.length === 0) return null;
+
+      const best = results[0];
+      const timestamp = new Date(best.timestamp).toLocaleTimeString();
+
+      logger.info('Cache hit', {
+        similarity: best.similarity,
+        timestamp,
+        modelName: best.modelName
+      });
+
+      return {
+        model: best.modelName,
+        content: `**[OFFLINE MODE]** Showing cached response from ${timestamp} — this may not reflect current context.\n\n${best.responseText}`,
+        stopReason: 'stop',
+        tokens: { prompt: 0, completion: 0, total: 0 },
+        fromCache: true,
+        cacheEntry: best
+      };
+    } catch (error) {
+      logger.debug('Offline cache search failed', { error: error.message });
+      return null;
+    }
   }
 }
 
