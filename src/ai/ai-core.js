@@ -10,7 +10,6 @@ class AICore {
   constructor() {
     this.config = null;
     this.model = null;
-    this.provider = null;
     this.streaming = false;
     this.temperature = 0.7;
     this.maxTokens = 2048;
@@ -20,14 +19,12 @@ class AICore {
   async initialize() {
     try {
       this.config = getConfig();
-      this.provider = this.config.get('llm.provider') || 'ollama';
       this.model = this.config.get('llm.model') || 'qwen2.5:1.5b';
       this.temperature = this.config.get('llm.temperature') || 0.7;
       this.maxTokens = this.config.get('llm.maxTokens') || 2048;
       this.streaming = this.config.get('llm.streaming') !== false;
 
-      logger.info('AI Core initialized', {
-        provider: this.provider,
+      logger.info('AI Core initialized (Ollama)', {
         model: this.model,
         streaming: this.streaming,
         temperature: this.temperature,
@@ -44,7 +41,7 @@ class AICore {
 
   async refreshModels() {
     try {
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.ollamaEndpoint();
       const response = await fetch(`${endpoint}/api/tags`, {
         timeout: 5000
       });
@@ -57,8 +54,7 @@ class AICore {
       this.modelList = data.models || data.results || [];
 
       logger.info('Models refreshed', {
-        count: this.modelList.length,
-        provider: this.provider
+        count: this.modelList.length
       });
 
       return this.modelList;
@@ -68,15 +64,10 @@ class AICore {
     }
   }
 
-  getProviderEndpoint() {
-    if (this.provider === 'ollama') {
-      const host = this.config.get('llm.host') || 'localhost';
-      const port = this.config.get('llm.port') || 11434;
-      return `http://${host}:${port}`;
-    } else if (this.provider === 'openai') {
-      return 'https://api.openai.com/v1';
-    }
-    throw new Error(`Unsupported provider: ${this.provider}`);
+  ollamaEndpoint() {
+    const host = this.config.get('llm.host') || 'localhost';
+    const port = this.config.get('llm.port') || 11434;
+    return `http://${host}:${port}`;
   }
 
   async chat(messages, options = {}) {
@@ -86,7 +77,7 @@ class AICore {
       const temperature = options.temperature || this.temperature;
       const maxTokens = options.maxTokens || this.maxTokens;
 
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.ollamaEndpoint();
       const requestBody = this.buildRequestBody(
         model,
         messages,
@@ -112,7 +103,7 @@ class AICore {
         const data = await response.json();
         return {
           model: data.model || model,
-          content: data.message?.content || data.choices?.[0]?.message?.content || '',
+          content: data.message?.content || '',
           stopReason: data.done ? 'stop' : 'length',
           tokens: {
             prompt: data.prompt_eval_count || 0,
@@ -128,28 +119,17 @@ class AICore {
   }
 
   buildRequestBody(model, messages, temperature, maxTokens, streaming) {
-    if (this.provider === 'ollama') {
-      return {
-        model,
-        messages,
-        stream: streaming,
+    return {
+      model,
+      messages,
+      stream: streaming,
+      temperature,
+      num_predict: maxTokens,
+      options: {
         temperature,
-        num_predict: maxTokens,
-        options: {
-          temperature,
-          num_predict: maxTokens
-        }
-      };
-    } else if (this.provider === 'openai') {
-      return {
-        model,
-        messages,
-        stream: streaming,
-        temperature,
-        max_tokens: maxTokens
-      };
-    }
-    throw new Error(`Unsupported provider: ${this.provider}`);
+        num_predict: maxTokens
+      }
+    };
   }
 
   async *handleStreamingResponse(response) {
@@ -172,38 +152,22 @@ class AICore {
           try {
             const json = JSON.parse(line);
 
-            if (this.provider === 'ollama') {
-              if (json.message?.content) {
-                yield {
-                  type: 'content',
-                  content: json.message.content
-                };
-              }
-              if (json.done) {
-                yield {
-                  type: 'done',
-                  model: json.model,
-                  tokens: {
-                    prompt: json.prompt_eval_count || 0,
-                    completion: json.eval_count || 0,
-                    total: (json.prompt_eval_count || 0) + (json.eval_count || 0)
-                  }
-                };
-              }
-            } else if (this.provider === 'openai') {
-              const delta = json.choices?.[0]?.delta;
-              if (delta?.content) {
-                yield {
-                  type: 'content',
-                  content: delta.content
-                };
-              }
-              if (json.choices?.[0]?.finish_reason) {
-                yield {
-                  type: 'done',
-                  stopReason: json.choices[0].finish_reason
-                };
-              }
+            if (json.message?.content) {
+              yield {
+                type: 'content',
+                content: json.message.content
+              };
+            }
+            if (json.done) {
+              yield {
+                type: 'done',
+                model: json.model,
+                tokens: {
+                  prompt: json.prompt_eval_count || 0,
+                  completion: json.eval_count || 0,
+                  total: (json.prompt_eval_count || 0) + (json.eval_count || 0)
+                }
+              };
             }
           } catch (parseError) {
             logger.debug('Stream line parse error', { line, error: parseError.message });
@@ -233,11 +197,7 @@ class AICore {
 
   async embeddings(texts) {
     try {
-      if (this.provider !== 'ollama') {
-        throw new Error('Embeddings only supported for Ollama');
-      }
-
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.ollamaEndpoint();
       const results = [];
 
       for (const text of texts) {
@@ -286,18 +246,6 @@ class AICore {
     return this.modelList;
   }
 
-  setProvider(providerName) {
-    if (!['ollama', 'openai', 'local'].includes(providerName)) {
-      throw new Error(`Unsupported provider: ${providerName}`);
-    }
-    this.provider = providerName;
-    logger.info('Provider changed', { provider: providerName });
-  }
-
-  getProvider() {
-    return this.provider;
-  }
-
   setStreaming(enabled) {
     this.streaming = !!enabled;
     logger.debug('Streaming changed', { enabled: this.streaming });
@@ -333,7 +281,7 @@ class AICore {
 
   async healthCheck() {
     try {
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.ollamaEndpoint();
       const response = await fetch(`${endpoint}/api/tags`, {
         timeout: 5000
       });
