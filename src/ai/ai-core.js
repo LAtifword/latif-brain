@@ -14,6 +14,14 @@ class AICore {
     this.temperature = 0.7;
     this.maxTokens = 2048;
     this.modelList = [];
+
+    // Auto-detection state
+    this.serverAvailable = false;
+    this.lastKnownWorkingServer = null;
+    this.serverCheckInProgress = false;
+    this.serverCheckTimestamp = 0;
+    this.ollamaDiscoveryStatus = 'unchecked';
+    this.discoveredOllamaHost = null;
   }
 
   async initialize() {
@@ -31,8 +39,15 @@ class AICore {
         maxTokens: this.maxTokens
       });
 
+      // Auto-detect server availability
+      await this.autoDetectServer();
+
       // Fetch available models
-      await this.refreshModels();
+      if (this.serverAvailable) {
+        await this.refreshModels();
+      } else {
+        logger.warn('Ollama server not available - running in offline mode');
+      }
     } catch (error) {
       logger.error('AI Core initialization failed', { error: error.message });
       throw error;
@@ -70,6 +85,60 @@ class AICore {
     return `http://${host}:${port}`;
   }
 
+  async autoDetectServer() {
+    if (this.serverCheckInProgress) return;
+
+    const now = Date.now();
+    if (now - this.serverCheckTimestamp < 30000) return; // Rate limit: 30s
+
+    this.serverCheckInProgress = true;
+    this.serverCheckTimestamp = now;
+
+    try {
+      const fallbackChain = [
+        `http://127.0.0.1:11434`,
+        `http://localhost:11434`,
+        `http://192.168.1.1:11434`, // Common router IP
+        this.lastKnownWorkingServer
+      ].filter(Boolean);
+
+      for (const endpoint of fallbackChain) {
+        try {
+          const response = await fetch(`${endpoint}/api/tags`, {
+            timeout: 2000
+          });
+
+          if (response.ok) {
+            this.serverAvailable = true;
+            this.lastKnownWorkingServer = endpoint;
+            this.discoveredOllamaHost = endpoint;
+            this.ollamaDiscoveryStatus = 'discovered';
+
+            logger.info('Ollama server auto-detected', {
+              endpoint,
+              status: 'available'
+            });
+            return true;
+          }
+        } catch (err) {
+          logger.debug('Server detection failed', {
+            endpoint,
+            error: err.message
+          });
+        }
+      }
+
+      this.serverAvailable = false;
+      this.ollamaDiscoveryStatus = 'not-found';
+      logger.warn('Ollama server not detected', {
+        attemptedEndpoints: fallbackChain.length
+      });
+      return false;
+    } finally {
+      this.serverCheckInProgress = false;
+    }
+  }
+
   async chat(messages, options = {}) {
     try {
       const model = options.model || this.model;
@@ -77,7 +146,7 @@ class AICore {
       const temperature = options.temperature || this.temperature;
       const maxTokens = options.maxTokens || this.maxTokens;
 
-      const endpoint = this.ollamaEndpoint();
+      const endpoint = this.discoveredOllamaHost || this.ollamaEndpoint();
       const requestBody = this.buildRequestBody(
         model,
         messages,
@@ -114,6 +183,9 @@ class AICore {
       }
     } catch (error) {
       logger.error('Chat failed', { error: error.message });
+      // Attempt re-detection on error
+      this.serverAvailable = false;
+      await this.autoDetectServer();
       throw error;
     }
   }
@@ -281,14 +353,40 @@ class AICore {
 
   async healthCheck() {
     try {
-      const endpoint = this.ollamaEndpoint();
+      const endpoint = this.discoveredOllamaHost || this.ollamaEndpoint();
       const response = await fetch(`${endpoint}/api/tags`, {
         timeout: 5000
       });
-      return response.ok;
+      const ok = response.ok;
+      if (ok) {
+        this.serverAvailable = true;
+      } else {
+        this.serverAvailable = false;
+      }
+      return ok;
     } catch (error) {
+      this.serverAvailable = false;
       return false;
     }
+  }
+
+  getServerStatus() {
+    return {
+      available: this.serverAvailable,
+      lastKnownWorking: this.lastKnownWorkingServer,
+      discoveredHost: this.discoveredOllamaHost,
+      discoveryStatus: this.ollamaDiscoveryStatus,
+      endpoint: this.discoveredOllamaHost || this.ollamaEndpoint()
+    };
+  }
+
+  setServerAvailable(available) {
+    this.serverAvailable = available;
+    logger.debug('Server availability changed', { available });
+  }
+
+  isServerAvailable() {
+    return this.serverAvailable;
   }
 }
 
