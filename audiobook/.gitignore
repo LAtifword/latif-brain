@@ -1,0 +1,4 @@
+# Generated intermediates — rebuilt by scripts/run_all.sh
+build/
+# Downloaded binaries (fetched by scripts/fetch_tools.sh)
+/bin/
