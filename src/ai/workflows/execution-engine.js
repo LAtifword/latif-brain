@@ -115,10 +115,11 @@ export class WorkflowDefinition {
       errors.push('Workflow contains cycle');
     }
 
-    // Check for orphaned nodes
-    this.nodes.forEach((node, nodeId) => {
-      if (!this.hasPath(nodeId)) {
-        errors.push(`Node ${node.name} is orphaned`);
+    // Standalone nodes are valid workflows. Only edges that reference missing
+    // nodes make a definition invalid.
+    this.edges.forEach(edge => {
+      if (!this.nodes.has(edge.sourceId) || !this.nodes.has(edge.targetId)) {
+        errors.push(`Edge ${edge.id} references a missing node`);
       }
     });
 

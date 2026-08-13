@@ -27,12 +27,13 @@ class Logger extends EventEmitter {
 
     this.level = options.level || LOG_LEVELS.INFO;
     this.service = options.service || 'latif';
+    this.isBrowser = typeof window !== 'undefined';
     this.logDir = options.logDir || './logs';
     this.maxFileSize = options.maxFileSize || 10 * 1024 * 1024; // 10MB
     this.maxFiles = options.maxFiles || 10;
-    this.transports = options.transports || ['console', 'file'];
+    this.transports = options.transports || (this.isBrowser ? ['console'] : ['console', 'file']);
 
-    this.initializeLogDirectory();
+    if (!this.isBrowser) this.initializeLogDirectory();
     this.currentLogFile = null;
     this.logBuffer = [];
     this.bufferSize = 0;
@@ -55,12 +56,16 @@ class Logger extends EventEmitter {
       level,
       service: this.service,
       message,
-      pid: process.pid,
+      pid: typeof process !== 'undefined' ? process.pid : undefined,
       ...data
     };
   }
 
   async writeToFile(logEntry) {
+    if (this.isBrowser) {
+      this.emit('log', logEntry);
+      return;
+    }
     try {
       const timestamp = new Date().toISOString().split('T')[0];
       const logFile = path.join(this.logDir, `${this.service}-${timestamp}.log`);
@@ -182,6 +187,7 @@ class Logger extends EventEmitter {
   }
 
   async getRecentLogs(lines = 100) {
+    if (this.isBrowser) return [];
     try {
       const logFile = path.join(this.logDir, `${this.service}-${new Date().toISOString().split('T')[0]}.log`);
 
@@ -206,6 +212,7 @@ class Logger extends EventEmitter {
   }
 
   async getLogStats() {
+    if (this.isBrowser) return { files: 0, size: 0 };
     try {
       const files = fs.readdirSync(this.logDir)
         .filter(f => f.startsWith(this.service));

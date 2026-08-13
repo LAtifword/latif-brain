@@ -12,8 +12,6 @@ const http = require('http');
 const WebSocket = require('ws');
 const cors = require('cors');
 const os = require('os');
-const fs = require('fs').promises;
-const path = require('path');
 const { EventEmitter } = require('events');
 
 const app = express();
@@ -59,7 +57,6 @@ class LatifNICore extends EventEmitter {
   }
 
   updateSystemMetrics() {
-    const cpus = os.cpus();
     const totalMemory = os.totalmem();
     const freeMemory = os.freemem();
     const usedMemory = totalMemory - freeMemory;
@@ -273,28 +270,29 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message);
 
       switch (data.type) {
-        case 'execute-agent':
-          core.addTask({
-            agentId: data.agentId,
-            agentName: data.agentName,
-            description: data.task,
-            status: 'Running',
-            progress: 0
-          });
-          core.broadcast({ type: 'agent-executing', data });
-          break;
+      case 'execute-agent':
+        core.addTask({
+          agentId: data.agentId,
+          agentName: data.agentName,
+          description: data.task,
+          status: 'Running',
+          progress: 0
+        });
+        core.broadcast({ type: 'agent-executing', data });
+        break;
 
-        case 'create-workflow':
-          const workflow = {
-            id: `wf-${Date.now()}`,
-            name: data.name,
-            agents: data.agents,
-            status: 'Running',
-            progress: 0
-          };
-          core.workflows.push(workflow);
-          core.broadcast({ type: 'workflow-created', data: workflow });
-          break;
+      case 'create-workflow': {
+        const workflow = {
+          id: `wf-${Date.now()}`,
+          name: data.name,
+          agents: data.agents,
+          status: 'Running',
+          progress: 0
+        };
+        core.workflows.push(workflow);
+        core.broadcast({ type: 'workflow-created', data: workflow });
+        break;
+      }
       }
     } catch (err) {
       console.error('WebSocket message error:', err);
@@ -319,7 +317,7 @@ server.listen(PORT, () => {
   console.log(`✓ WebSocket: ws://localhost:${PORT}`);
   console.log(`✓ Dashboard API: http://localhost:${PORT}/api/dashboard`);
   console.log(`✓ Agents: ${Object.keys(core.agents).length} running`);
-  console.log(`✓ System monitoring: ACTIVE\n`);
+  console.log('✓ System monitoring: ACTIVE\n');
 });
 
 module.exports = app;

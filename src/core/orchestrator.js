@@ -3,7 +3,6 @@
  * Test-compatible interface for agent orchestration
  */
 
-import { EventBus } from './event-bus.js';
 import { getLogger } from './logger.js';
 
 const logger = getLogger();

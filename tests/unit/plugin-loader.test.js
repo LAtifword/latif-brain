@@ -2,7 +2,7 @@
  * Unit tests for Plugin Loader
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@latif/test-framework';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { PluginLoader, PluginInstance } from '../../src/plugins/plugin-loader.js';
 
 describe('PluginLoader', () => {

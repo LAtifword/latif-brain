@@ -18,7 +18,7 @@ export default (env, argv) => {
     {
       name: 'browser',
       mode: isProduction ? 'production' : 'development',
-      entry: './src/core/ai-core.js',
+      entry: './src/core/orchestrator.js',
       output: {
         path: path.resolve(__dirname, 'dist/browser'),
         filename: 'latif.js',
@@ -27,6 +27,15 @@ export default (env, argv) => {
           name: 'LATIF'
         },
         globalObject: 'typeof self !== "undefined" ? self : this'
+      },
+      resolve: {
+        alias: {
+          [path.resolve(__dirname, 'bridge.js')]: path.resolve(__dirname, 'src/core/kimi-bridge.browser.js')
+        },
+        fallback: {
+          fs: false,
+          path: false
+        }
       },
       module: {
         rules: [
@@ -63,7 +72,7 @@ export default (env, argv) => {
       name: 'node',
       mode: isProduction ? 'production' : 'development',
       target: 'node',
-      entry: './src/core/ai-core.js',
+      entry: './src/core/orchestrator.js',
       output: {
         path: path.resolve(__dirname, 'dist/node'),
         filename: 'index.js',

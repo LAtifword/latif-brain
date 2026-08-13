@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { ZipArchive } from 'archiver';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,8 +70,7 @@ async function createZip() {
     execSync('npm install archiver --save-dev', { stdio: 'inherit' });
   }
 
-  const archiver_ = await import('archiver');
-  const archive = archiver_.default('zip', { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
 
   // Create write stream
   const output = fs.createWriteStream(zipPath);
