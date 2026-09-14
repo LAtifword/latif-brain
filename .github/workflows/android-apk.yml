@@ -40,11 +40,13 @@ jobs:
         working-directory: android
         run: gradle --no-daemon --stacktrace clean :app:assembleDebug
 
-      - name: Verify APK archive
+      - name: Verify APK and signature
         run: |
-          test -f android/app/build/outputs/apk/debug/app-debug.apk
-          unzip -t android/app/build/outputs/apk/debug/app-debug.apk >/dev/null
-          cp android/app/build/outputs/apk/debug/app-debug.apk LATIF-BRAIN-final.apk
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          unzip -t "$APK" >/dev/null
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          cp "$APK" LATIF-BRAIN-final.apk
           sha256sum LATIF-BRAIN-final.apk | tee LATIF-BRAIN-final.apk.sha256
 
       - name: Upload final APK
