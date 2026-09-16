@@ -27,13 +27,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Use preinstalled Android SDK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          SDK='/usr/local/lib/android/sdk'
+          test -x "$SDK/cmdline-tools/latest/bin/sdkmanager"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
 
       - name: Install pinned Android toolchain
         shell: bash
@@ -141,7 +149,6 @@ jobs:
           echo "APK=$APK" >> "$GITHUB_ENV"
           ls -lh "$APK"
 
-          # Prove the model chunks and in-process llama native library are in the APK.
           zipinfo -1 "$APK" | grep -E '^assets/sigma/model/model-[0-9]+\.ggufpart$' | tee /tmp/model-parts.txt
           test "$(wc -l < /tmp/model-parts.txt)" -ge 4
           zipinfo -1 "$APK" | grep -E '^lib/arm64-v8a/libai-chat\.so$'
