@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "LATIF-BRAIN"
-include ':app'
+include ':app', ':webapps'
