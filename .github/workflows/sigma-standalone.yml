@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - sigma-standalone
+      - main
     paths:
       - 'sigma/**'
       - '.github/workflows/sigma-standalone.yml'
@@ -73,11 +73,13 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          python3 -m py_compile sigma/patch_upstream.py sigma/chunk_model.py
+          python3 -m py_compile sigma/patch_upstream.py sigma/chunk_model.py sigma/fix_llama_compat.py
           python3 sigma/patch_upstream.py work/web-to-app
+          python3 sigma/fix_llama_compat.py work/web-to-app
           grep -F 'SigmaLocalProvider' work/web-to-app/app/src/main/java/com/webtoapp/core/agent/llm/LlmGateway.kt
           grep -F 'com.latif.sigma' work/web-to-app/app/build.gradle.kts
           grep -F '>SIGMA<' work/web-to-app/app/src/main/res/values/strings.xml
+          grep -F 'private val llamaDispatcher = Dispatchers.IO' work/web-to-app/vendor/llama.cpp/examples/llama.android/lib/src/main/java/com/arm/aichat/internal/InferenceEngineImpl.kt
 
       - name: Preflight compile local inference and Kotlin before model download
         working-directory: work/web-to-app
