@@ -1,0 +1,65 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.latif.suite'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    flavorDimensions += 'surface'
+    productFlavors {
+        gx {
+            dimension 'surface'
+            applicationId 'com.latif.gx'
+            versionName '1.0.0'
+            resValue 'string', 'app_name', 'LATIF GX'
+            buildConfigField 'String', 'START_PAGE', '"index.html"'
+        }
+        ni {
+            dimension 'surface'
+            applicationId 'com.latif.ni.dashboard'
+            versionName '1.0.0'
+            resValue 'string', 'app_name', 'LATIF NI'
+            buildConfigField 'String', 'START_PAGE', '"latif-ni-dashboard.html"'
+        }
+        web {
+            dimension 'surface'
+            applicationId 'com.latif.web'
+            versionName '1.0.0'
+            resValue 'string', 'app_name', 'LATIF WEB'
+            buildConfigField 'String', 'START_PAGE', '"latif-web.html"'
+        }
+    }
+
+    sourceSets {
+        gx.assets.srcDirs = [rootProject.file('../latif-ai')]
+        ni.assets.srcDirs = [rootProject.file('../src/dashboards')]
+        web.assets.srcDirs = [rootProject.file('../src/dashboards')]
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
