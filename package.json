@@ -23,8 +23,7 @@
     "docs": "node tools/generate-docs.js",
     "lint": "eslint src tests tools",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"tools/**/*.js\"",
-    "typecheck": "tsc --noEmit",
-    "prepare": "node tools/setup.js"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "ai",
@@ -48,7 +47,7 @@
   },
   "homepage": "https://github.com/LAtifword/latif-brain#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "exports": {
     ".": "./src/core/ai-core.js",
@@ -111,7 +110,7 @@
         "@babel/preset-env",
         {
           "targets": {
-            "node": "18"
+            "node": "20"
           }
         }
       ]
