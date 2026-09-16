@@ -1,10 +1,20 @@
-name: Android APK
+name: Android APK Suite
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - build/all-ready-apks
     paths:
       - 'android/**'
+      - 'latif-ai/**'
+      - 'src/dashboards/**'
+      - '.github/workflows/android-apk.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'latif-ai/**'
+      - 'src/dashboards/**'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 
@@ -12,9 +22,9 @@ permissions:
   contents: read
 
 jobs:
-  build-apk:
+  build-apks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -41,25 +51,51 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build installable APK
+      - name: Build all installable APKs
         working-directory: android
-        run: gradle --no-daemon --stacktrace clean :app:assembleDebug
-
-      - name: Verify APK and signature
         run: |
-          APK=android/app/build/outputs/apk/debug/app-debug.apk
-          test -f "$APK"
-          unzip -t "$APK" >/dev/null
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
-          cp "$APK" LATIF-BRAIN-v1.1.0.apk
-          sha256sum LATIF-BRAIN-v1.1.0.apk | tee LATIF-BRAIN-v1.1.0.apk.sha256
+          gradle --no-daemon --stacktrace clean \
+            :app:assembleDebug \
+            :webapps:assembleGxDebug \
+            :webapps:assembleNiDebug \
+            :webapps:assembleWebDebug
 
-      - name: Upload final APK
+      - name: Collect APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          BRAIN_APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          GX_APK="$(find android/webapps/build/outputs/apk/gx/debug -type f -name '*.apk' -print -quit)"
+          NI_APK="$(find android/webapps/build/outputs/apk/ni/debug -type f -name '*.apk' -print -quit)"
+          WEB_APK="$(find android/webapps/build/outputs/apk/web/debug -type f -name '*.apk' -print -quit)"
+
+          test -f "$BRAIN_APK"
+          test -f "$GX_APK"
+          test -f "$NI_APK"
+          test -f "$WEB_APK"
+
+          cp "$BRAIN_APK" dist/LATIF-BRAIN-v1.1.0.apk
+          cp "$GX_APK" dist/LATIF-GX-v1.0.0.apk
+          cp "$NI_APK" dist/LATIF-NI-v1.0.0.apk
+          cp "$WEB_APK" dist/LATIF-WEB-v1.0.0.apk
+
+      - name: Verify APK integrity and signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          for APK in dist/*.apk; do
+            echo "Verifying $APK"
+            unzip -t "$APK" >/dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          done
+          (cd dist && sha256sum *.apk | tee SHA256SUMS.txt)
+
+      - name: Upload ready-to-install APK suite
         uses: actions/upload-artifact@v4
         with:
-          name: LATIF-BRAIN-v1.1.0
-          path: |
-            LATIF-BRAIN-v1.1.0.apk
-            LATIF-BRAIN-v1.1.0.apk.sha256
+          name: LATIF-ANDROID-APKS
+          path: dist/
           if-no-files-found: error
           retention-days: 90
