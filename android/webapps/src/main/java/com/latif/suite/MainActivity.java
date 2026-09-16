@@ -53,6 +53,26 @@ public class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return assetLoader.shouldInterceptRequest(request.getUrl());
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (!BuildConfig.LOCAL_AI_ENABLED) return;
+
+                String bridgeAsset = "index.html".equals(BuildConfig.START_PAGE)
+                        ? "js/native-ai.js"
+                        : "latif-native-ai.js";
+                String bridgeUrl = "https://appassets.androidplatform.net/assets/" + bridgeAsset;
+                String bootstrap = "(function(){" +
+                        "if(window.__LATIF_NATIVE_UI_INJECTED)return;" +
+                        "window.__LATIF_NATIVE_UI_INJECTED=true;" +
+                        "var s=document.createElement('script');" +
+                        "s.src='" + bridgeUrl + "';" +
+                        "s.async=false;" +
+                        "document.head.appendChild(s);" +
+                        "})();";
+                view.evaluateJavascript(bootstrap, null);
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
