@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "product": "SIGMA Desktop",
+  "platform": "windows-x64",
+  "inference": {
+    "engine": "llama.cpp",
+    "modelFormat": "gguf",
+    "networkRequired": false,
+    "backendOrder": ["cuda", "vulkan", "cpu"],
+    "contextTokensDefault": 8192,
+    "contextTokensAdaptive": true
+  },
+  "memory": {
+    "persistent": true,
+    "database": "sqlite",
+    "fts": true
+  },
+  "agent": {
+    "workspaceTools": true,
+    "documentTools": true,
+    "localExecution": true,
+    "destructiveActionsRequireConfirmation": true
+  },
+  "web": {
+    "optional": true,
+    "usedForCoreInference": false
+  }
+}
