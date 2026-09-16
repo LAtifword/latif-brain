@@ -1,0 +1,192 @@
+name: SIGMA Standalone APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - sigma-standalone
+    paths:
+      - 'sigma/**'
+      - '.github/workflows/sigma-standalone.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sigma-standalone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build sealed ARM64 SIGMA APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout SIGMA build overlay
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install pinned Android toolchain
+        shell: bash
+        run: |
+          set -euxo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            'platforms;android-36' \
+            'build-tools;36.0.0' \
+            'ndk;29.0.13113456' \
+            'cmake;3.22.1' \
+            'cmake;3.31.6'
+          df -h
+
+      - name: Fetch pinned host and local inference source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p work
+          git clone --filter=blob:none --no-tags https://github.com/shiaho777/web-to-app.git work/web-to-app
+          cd work/web-to-app
+          git checkout --detach eafd07e4c6aa488f123f82eae37f6799a0cb03d4
+          mkdir -p vendor
+          git clone --depth 1 --branch v0.4.1 https://github.com/ggml-org/llama.cpp.git vendor/llama.cpp
+          test "$(git rev-parse HEAD)" = 'eafd07e4c6aa488f123f82eae37f6799a0cb03d4'
+          git -C vendor/llama.cpp describe --tags --exact-match | grep -Fx 'v0.4.1'
+
+      - name: Apply SIGMA local-AI overlay
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile sigma/patch_upstream.py sigma/chunk_model.py
+          python3 sigma/patch_upstream.py work/web-to-app
+          grep -F 'SigmaLocalProvider' work/web-to-app/app/src/main/java/com/webtoapp/core/agent/llm/LlmGateway.kt
+          grep -F 'com.latif.sigma' work/web-to-app/app/build.gradle.kts
+          grep -F '>SIGMA<' work/web-to-app/app/src/main/res/values/strings.xml
+
+      - name: Preflight compile local inference and Kotlin before model download
+        working-directory: work/web-to-app
+        shell: bash
+        run: |
+          set -euxo pipefail
+          chmod +x gradlew
+          ./gradlew \
+            :llama-android-lib:assembleRelease \
+            :app:compileStandardReleaseKotlin \
+            -PskipShellTemplateSync=true \
+            -PallowDebugSignedRelease=true \
+            --no-daemon \
+            --stacktrace
+
+      - name: Download and cryptographically verify official Qwen3 4B GGUF
+        shell: bash
+        env:
+          MODEL_URL: https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf?download=true
+          MODEL_SHA256: 7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5
+        run: |
+          set -euxo pipefail
+          mkdir -p work/model
+          curl -fL \
+            --retry 8 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 30 \
+            -o work/model/Qwen3-4B-Q4_K_M.gguf \
+            "$MODEL_URL"
+          echo "$MODEL_SHA256  work/model/Qwen3-4B-Q4_K_M.gguf" | sha256sum -c -
+          ls -lh work/model/Qwen3-4B-Q4_K_M.gguf
+          df -h
+
+      - name: Chunk model into embedded APK assets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ASSET_DIR='work/web-to-app/app/src/main/assets/sigma/model'
+          python3 sigma/chunk_model.py work/model/Qwen3-4B-Q4_K_M.gguf "$ASSET_DIR"
+          curl -fL --retry 5 \
+            https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/LICENSE \
+            -o "$ASSET_DIR/LICENSE-QWEN3.txt"
+          cp work/web-to-app/vendor/llama.cpp/LICENSE \
+            work/web-to-app/app/src/main/assets/sigma/LICENSE-LLAMA-CPP.txt
+          rm -f work/model/Qwen3-4B-Q4_K_M.gguf
+          cat "$ASSET_DIR/MODEL-MANIFEST.txt"
+          du -sh "$ASSET_DIR"
+          df -h
+
+      - name: Build standalone SIGMA release APK
+        working-directory: work/web-to-app
+        shell: bash
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8
+        run: |
+          set -euxo pipefail
+          ./gradlew \
+            :app:assembleStandardRelease \
+            -PallowDebugSignedRelease=true \
+            --no-daemon \
+            --stacktrace
+
+      - name: Audit APK integrity and embedded intelligence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APK="$(find work/web-to-app/app/build/outputs/apk -type f -name '*standard*release*.apk' | head -n 1)"
+          test -n "$APK"
+          test -f "$APK"
+          echo "APK=$APK" >> "$GITHUB_ENV"
+          ls -lh "$APK"
+
+          # Prove the model chunks and in-process llama native library are in the APK.
+          zipinfo -1 "$APK" | grep -E '^assets/sigma/model/model-[0-9]+\.ggufpart$' | tee /tmp/model-parts.txt
+          test "$(wc -l < /tmp/model-parts.txt)" -ge 4
+          zipinfo -1 "$APK" | grep -E '^lib/arm64-v8a/libai-chat\.so$'
+          ! zipinfo -1 "$APK" | grep -q '^lib/x86/'
+          ! zipinfo -1 "$APK" | grep -q '^lib/x86_64/'
+          ! zipinfo -1 "$APK" | grep -q '^lib/armeabi-v7a/'
+          zipinfo -1 "$APK" | grep -F 'assets/sigma/SIGMA-BUILD.txt'
+          zipinfo -1 "$APK" | grep -F 'assets/sigma/model/MODEL-MANIFEST.txt'
+
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose "$APK"
+          sha256sum "$APK"
+
+      - name: Prepare transport-safe build artifact
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          cp "$APK" dist/SIGMA-v0.1.0-alpha1.apk
+          sha256sum dist/SIGMA-v0.1.0-alpha1.apk > dist/SIGMA-v0.1.0-alpha1.apk.sha256
+          SIZE="$(stat -c '%s' dist/SIGMA-v0.1.0-alpha1.apk)"
+          split -b 1800M -d -a 2 --additional-suffix=.part \
+            dist/SIGMA-v0.1.0-alpha1.apk \
+            dist/SIGMA-v0.1.0-alpha1.apk.
+          rm dist/SIGMA-v0.1.0-alpha1.apk
+          cat > dist/REASSEMBLE.txt <<'EOF'
+          The installable product is ONE APK. CI splits it only for artifact transport.
+
+          Linux/macOS/Termux:
+            cat SIGMA-v0.1.0-alpha1.apk.*.part > SIGMA-v0.1.0-alpha1.apk
+            sha256sum -c SIGMA-v0.1.0-alpha1.apk.sha256
+
+          The reconstructed APK is byte-identical to the signed APK produced by Gradle.
+          EOF
+          printf 'apk_bytes=%s\n' "$SIZE" > dist/BUILD-METADATA.txt
+          printf 'host_commit=eafd07e4c6aa488f123f82eae37f6799a0cb03d4\n' >> dist/BUILD-METADATA.txt
+          printf 'llama_cpp=v0.4.1\n' >> dist/BUILD-METADATA.txt
+          printf 'model_sha256=7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5\n' >> dist/BUILD-METADATA.txt
+          ls -lh dist
+
+      - name: Upload SIGMA APK artifact parts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIGMA-v0.1.0-alpha1-standalone
+          path: dist/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
