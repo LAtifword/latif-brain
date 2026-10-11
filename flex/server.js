@@ -7,6 +7,7 @@ import { syncToLatifCloud } from './cloud-sync.js';
 
 const app = express();
 const port = Number(process.env.FLEX_PORT || 3100);
+const host = process.env.FLEX_HOST || '127.0.0.1';
 const memory = new MemoryStore();
 const providers = loadProviders();
 
@@ -39,4 +40,4 @@ app.post('/api/chat', async (req, res) => {
 });
 
 await memory.init();
-app.listen(port, '0.0.0.0', () => console.log(`LATIF Model Flex listening on 0.0.0.0:${port}`));
+app.listen(port, host, () => console.log(`LATIF Model Flex listening on ${host}:${port}`));
