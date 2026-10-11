@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/main.js",
+    "flex": "node flex/server.js",
     "dev": "NODE_ENV=development node src/main.js",
     "backend": "node src/services/LATIF-NI-BACKEND-SERVICE.js",
     "dashboard": "node src/main.js && echo '\\n✓ Dashboard available at http://localhost:3001'",
