@@ -36,10 +36,20 @@ function clientFor(provider) {
   return new OpenAI({ apiKey: provider.apiKey, baseURL: provider.baseURL || undefined });
 }
 
+function configured(provider) {
+  return Boolean(provider?.apiKey && provider?.model);
+}
+
 export async function complete({ messages, mode = 'auto', providers = loadProviders(), temperature = 0.2 }) {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
   const route = mode === 'auto' ? classifyTask(lastUser) : mode;
-  const provider = providers[route] || providers.cheap;
+  // Prefer the local model for routine work. Use cloud providers only when
+  // explicitly requested or when the local model is unavailable.
+  let provider;
+  if (mode === 'local') provider = providers.local;
+  else if (route === 'cheap' && configured(providers.local)) provider = providers.local;
+  else provider = providers[route] || providers.cheap;
+  if (!configured(provider) && configured(providers.local)) provider = providers.local;
   const client = clientFor(provider);
   const response = await client.chat.completions.create({
     model: provider.model,
