@@ -1,0 +1,131 @@
+name: Android APK Suite
+
+on:
+  push:
+    branches:
+      - main
+      - build/all-ready-apks
+      - standalone-native-ai
+    paths:
+      - 'android/**'
+      - 'latif-ai/**'
+      - 'src/dashboards/**'
+      - '.github/workflows/android-apk.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'latif-ai/**'
+      - 'src/dashboards/**'
+      - '.github/workflows/android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      GX_MODEL_URL: https://huggingface.co/litert-community/Qwen3-1.7B/resolve/main/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm?download=true
+      GX_MODEL_SHA256: 2eeffef7b51bc3e1225ea69fe7aa5f417397934b56a5b6c20cc068d6fd2c918b
+      NI_MODEL_URL: https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm?download=true
+      NI_MODEL_SHA256: e3e290109da4388d65a17510a0c66af91c8039f52d2c465868dbc43c09a776cf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configure Android SDK
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Download and verify embedded AI models
+        shell: bash
+        run: |
+          set -euo pipefail
+          GX_DIR="android/webapps/src/gx/assets/models"
+          NI_DIR="android/webapps/src/ni/assets/models"
+          mkdir -p "$GX_DIR" "$NI_DIR"
+
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
+            "$GX_MODEL_URL" -o "$GX_DIR/gx-qwen3-1.7b-int4.litertlm"
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
+            "$NI_MODEL_URL" -o "$NI_DIR/ni-qwen3-0.6b-int4.litertlm"
+
+          echo "$GX_MODEL_SHA256  $GX_DIR/gx-qwen3-1.7b-int4.litertlm" | sha256sum -c -
+          echo "$NI_MODEL_SHA256  $NI_DIR/ni-qwen3-0.6b-int4.litertlm" | sha256sum -c -
+
+          ls -lh "$GX_DIR" "$NI_DIR"
+
+      - name: Build all installable APKs
+        working-directory: android
+        run: |
+          gradle --no-daemon --stacktrace clean \
+            :app:assembleDebug \
+            :webapps:assembleGxDebug \
+            :webapps:assembleNiDebug \
+            :webapps:assembleWebDebug
+
+      - name: Collect APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          BRAIN_APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          GX_APK="$(find android/webapps/build/outputs/apk/gx/debug -type f -name '*.apk' -print -quit)"
+          NI_APK="$(find android/webapps/build/outputs/apk/ni/debug -type f -name '*.apk' -print -quit)"
+          WEB_APK="$(find android/webapps/build/outputs/apk/web/debug -type f -name '*.apk' -print -quit)"
+
+          test -f "$BRAIN_APK"
+          test -f "$GX_APK"
+          test -f "$NI_APK"
+          test -f "$WEB_APK"
+
+          cp "$BRAIN_APK" dist/LATIF-BRAIN-v1.1.0.apk
+          cp "$GX_APK" dist/LATIF-GX-v2.0.0-STANDALONE.apk
+          cp "$NI_APK" dist/LATIF-NI-v2.0.0-STANDALONE.apk
+          cp "$WEB_APK" dist/LATIF-WEB-v1.0.0.apk
+
+          ls -lh dist/
+
+      - name: Verify APK integrity, signatures and bundled models
+        shell: bash
+        run: |
+          set -euo pipefail
+          for APK in dist/*.apk; do
+            echo "Verifying $APK"
+            unzip -t "$APK" >/dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          done
+
+          unzip -l dist/LATIF-GX-v2.0.0-STANDALONE.apk | grep 'assets/models/gx-qwen3-1.7b-int4.litertlm'
+          unzip -l dist/LATIF-NI-v2.0.0-STANDALONE.apk | grep 'assets/models/ni-qwen3-0.6b-int4.litertlm'
+
+          (cd dist && sha256sum *.apk | tee SHA256SUMS.txt)
+
+      - name: Upload ready-to-install APK suite
+        uses: actions/upload-artifact@v4
+        with:
+          name: LATIF-STANDALONE-AI-APKS
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
