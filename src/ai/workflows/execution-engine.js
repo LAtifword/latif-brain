@@ -117,7 +117,7 @@ export class WorkflowDefinition {
 
     // Check for orphaned nodes
     this.nodes.forEach((node, nodeId) => {
-      if (!this.hasPath(nodeId)) {
+      if (this.nodes.size > 1 && !this.hasPath(nodeId)) {
         errors.push(`Node ${node.name} is orphaned`);
       }
     });
