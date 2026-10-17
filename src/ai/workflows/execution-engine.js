@@ -232,6 +232,10 @@ export class WorkflowExecution {
     this.startTime = Date.now();
 
     try {
+      const validation = this.workflow.validate();
+      if (!validation.valid) {
+        throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`);
+      }
       const executionOrder = this.workflow.getExecutionOrder();
 
       for (const node of executionOrder) {
