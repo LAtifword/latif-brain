@@ -262,7 +262,12 @@ function pickVoiceFor(lang) {
 function speakText(text, opts = {}) {
   if (!("speechSynthesis" in window)) { toast("Speech not supported"); return; }
   window.speechSynthesis.cancel();
-  const clean = text.replace(/[*#`_~|]/g, "").replace(/<[^>]+>/g, "");
+  let clean = text.replace(/[*#`_~|]/g, "");
+  let previous;
+  do {
+    previous = clean;
+    clean = clean.replace(/<[^>]+>/g, "");
+  } while (clean !== previous);
   if (!clean.trim()) { if (opts.onend) opts.onend(); return; }
   const lang = opts.lang || (isArabic(clean) ? "ar-SA" : "en-US");
   const utter = new SpeechSynthesisUtterance(clean);
