@@ -1,0 +1,11 @@
+{
+  "app": {
+    "environment": "development",
+    "logLevel": "debug",
+    "hotReload": true
+  },
+  "api": {
+    "port": 8080,
+    "host": "localhost"
+  }
+}

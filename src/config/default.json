@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "LATIF",
+    "version": "5.0.0",
+    "environment": "production"
+  },
+  "ollama": {
+    "baseURL": "http://localhost:11434",
+    "timeout": 30000
+  },
+  "database": {
+    "type": "indexeddb",
+    "maxSize": 52428800
+  },
+  "api": {
+    "port": 8080,
+    "host": "localhost",
+    "cors": "*"
+  },
+  "features": {
+    "plugins": true,
+    "workflows": true,
+    "knowledge-graph": true,
+    "vision": true,
+    "webhooks": true
+  }
+}

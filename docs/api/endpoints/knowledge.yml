@@ -1,0 +1,16 @@
+# knowledge Endpoints
+
+## GET /knowledge
+List all knowledges.
+
+## POST /knowledge  
+Create a new knowledge.
+
+## GET /knowledge/{id}
+Get a specific knowledge.
+
+## PUT /knowledge/{id}
+Update a knowledge.
+
+## DELETE /knowledge/{id}
+Delete a knowledge.

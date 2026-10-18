@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>LATIF AI</title>
+<meta name="theme-color" content="#fa1e4e" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="LATIF" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="css/gx-design.css" />
+<link rel="stylesheet" href="css/gx-mods.css" />
+</head>
+<body>
+
+<!-- Always-on GX shell backdrop (behind any mod wallpaper/shader) -->
+<div class="gxd-underwave"></div>
+<div id="gxdScanlineOverlay"></div>
+
+<!-- ════════════ STATUS / TOP BAR ════════════ -->
+<div class="topbar">
+  <button class="icon-btn" id="btnMenu" aria-label="Menu">
+    <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+
+  <div class="model-picker" id="modelPicker">
+    <span class="brand-word">LATIF</span>
+    <span class="model-name" id="currentModelLabel">connecting…</span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+
+  <div class="top-actions">
+    <button class="icon-btn" id="btnVoiceMode" aria-label="Voice conversation">
+      <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    </button>
+    <button class="icon-btn" id="btnNewChat" aria-label="New chat">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="icon-btn" id="btnMsgMenu" aria-label="More">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="19" r="1.8" fill="currentColor"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ════════════ MODEL DROPDOWN ════════════ -->
+<div class="dropdown-sheet" id="modelDropdown">
+  <div class="dd-title">Local Ollama Models</div>
+  <label class="dd-pin-row"><input type="checkbox" id="modelPinChat" /> Pin to this chat only</label>
+  <div id="modelList" class="dd-list">
+    <div class="dd-empty">Checking connection…</div>
+  </div>
+  <button class="dd-refresh" id="btnRefreshModels">↻ Refresh model list</button>
+</div>
+
+<!-- ════════════ MESSAGE ACTIONS MENU ════════════ -->
+<div class="dropdown-sheet right" id="msgMenu">
+  <button class="dd-item" id="actShare"><svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Share conversation</button>
+  <button class="dd-item" id="actPin"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 7 4 4H6l4-4-1-7Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg> Pin</button>
+  <button class="dd-item" id="actRename"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Rename</button>
+  <button class="dd-item" id="actExport"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" fill="none"/></svg> Export as .txt</button>
+  <button class="dd-item danger" id="actDelete"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg> Delete</button>
+</div>
+
+<!-- ════════════ CHAT AREA ════════════ -->
+<main class="chat-scroll" id="chatScroll">
+  <div class="welcome" id="welcomeScreen">
+    <div class="welcome-mark">⟡</div>
+    <div class="welcome-title">What's next, <span id="welcomeName">friend</span>?</div>
+    <div class="welcome-sub">Running 100% locally via Ollama — no cloud, no API keys.</div>
+    <div class="suggest-row" id="suggestRow">
+      <button class="suggest-chip" data-prompt="اكتب لي فقرة افتتاحية فلسفية بأسلوب كافكا">✍️ فقرة فلسفية</button>
+      <button class="suggest-chip" data-prompt="Summarize this in 3 bullet points:">📋 Summarize</button>
+      <button class="suggest-chip" data-prompt="اشرح لي هذا المفهوم بطريقة بسيطة:">💡 اشرح ببساطة</button>
+      <button class="suggest-chip" data-prompt="Help me brainstorm ideas for:">🌱 Brainstorm</button>
+    </div>
+  </div>
+  <div id="messages"></div>
+  <div class="scroll-pad"></div>
+</main>
+
+<!-- ════════════ ATTACH SHEET ════════════ -->
+<div class="sheet-backdrop" id="attachBackdrop"></div>
+<div class="attach-sheet" id="attachSheet">
+  <div class="sheet-handle"></div>
+  <div class="attach-grid">
+    <button class="attach-pill" id="attachCamera">
+      <span class="attach-icon">📷</span><span>Camera</span>
+    </button>
+    <button class="attach-pill" id="attachFiles">
+      <span class="attach-icon">📎</span><span>Files</span>
+    </button>
+    <button class="attach-pill" id="attachImage">
+      <span class="attach-icon">🖼️</span><span>Photos</span>
+    </button>
+  </div>
+  <div class="attach-list">
+    <button class="attach-row" id="rowSystemPrompt">
+      <span class="attach-row-icon">🧭</span>
+      <div><div class="attach-row-title">System Prompt</div><div class="attach-row-sub">Set behavior &amp; persona</div></div>
+    </button>
+    <button class="attach-row" id="rowParams">
+      <span class="attach-row-icon">🎛️</span>
+      <div><div class="attach-row-title">Model Parameters</div><div class="attach-row-sub">Temperature, context, top-p</div></div>
+    </button>
+    <button class="attach-row" id="rowClearCtx">
+      <span class="attach-row-icon">🧹</span>
+      <div><div class="attach-row-title">Clear Context</div><div class="attach-row-sub">Reset conversation memory</div></div>
+    </button>
+  </div>
+</div>
+<input type="file" id="fileInput" accept="image/*,audio/*,.txt,.md,.csv,.json,.pdf" multiple hidden />
+
+<!-- ════════════ INPUT BAR ════════════ -->
+<div class="input-stage">
+  <div id="attachPreview" class="attach-preview"></div>
+  <div class="input-bar">
+    <button class="icon-btn small" id="btnPlus" aria-label="Attach">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <textarea id="promptInput" class="prompt-input" placeholder="Ask LATIF AI…" rows="1"></textarea>
+    <button class="icon-btn small" id="btnMic" aria-label="Voice input">
+      <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    </button>
+    <button class="send-btn" id="btnSend" aria-label="Send" disabled>
+      <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="send-btn stop" id="btnStop" aria-label="Stop generating" style="display:none">
+      <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+    </button>
+  </div>
+  <div class="disclaimer">LATIF AI runs locally and can make mistakes.</div>
+</div>
+
+<!-- ════════════ SIDEBAR DRAWER ════════════ -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-brand"><span class="drawer-logo">⟡</span> LATIF AI</div>
+    <button class="icon-btn" id="btnCloseDrawer">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <button class="drawer-action" id="drawerNewChat">
+    <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    New chat
+  </button>
+  <div class="drawer-action search-wrap">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="searchChats" placeholder="Search chats" />
+  </div>
+
+  <!-- ════ LATIF Corner — GX Corner analog: quick prompts ════ -->
+  <div class="gxd-corner">
+    <div class="gxd-corner-title">LATIF Corner</div>
+    <div class="gxd-corner-chips" id="cornerChips"></div>
+  </div>
+
+  <button class="drawer-action" id="drawerCalendar">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Calendar &amp; Reminders
+  </button>
+  <button class="drawer-action" id="drawerSettingsTop">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+    Connection &amp; Settings
+  </button>
+
+  <div class="drawer-divider"></div>
+  <div class="drawer-section-label">Recents</div>
+  <div id="historyList" class="history-list"></div>
+
+  <div class="drawer-bottom">
+    <div class="drawer-server-pill" id="serverPill">
+      <span class="dot" id="serverDot"></span>
+      <span id="serverPillText">localhost:11434</span>
+    </div>
+    <div class="drawer-user">
+      <div class="avatar">L</div>
+      <div class="drawer-user-name">Latif Mohamed</div>
+      <button class="icon-btn" id="btnUserSettings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════ VOICE CONVERSATION MODE ════════════ -->
+<div class="voice-overlay" id="voiceOverlay">
+  <button class="voice-close" id="btnVoiceClose" aria-label="Close voice mode">
+    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="voice-lang-toggle" id="voiceLangToggle">EN/AR</div>
+
+  <div class="voice-stage">
+    <div class="orb-wrap">
+      <div class="orb-ring r1"></div>
+      <div class="orb-ring r2"></div>
+      <div class="orb-ring r3"></div>
+      <div class="orb-core" id="orbCore">⟡</div>
+    </div>
+    <div class="voice-status" id="voiceStatus">Tap to speak</div>
+    <div class="voice-transcript" id="voiceTranscript"></div>
+  </div>
+
+  <div class="voice-controls">
+    <button class="voice-ctrl-btn" id="btnVoiceKeyboard" aria-label="Switch to keyboard">
+      <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button class="voice-main-btn" id="btnVoiceToggle" aria-label="Toggle listening">
+      <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    </button>
+    <button class="voice-ctrl-btn" id="btnVoiceAutoSpeak" aria-label="Toggle auto-speak">
+      <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M19 8a6 6 0 0 1 0 8M16 10.5a2.5 2.5 0 0 1 0 3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ════════════ SETTINGS MODAL ════════════ -->
+<div class="modal-backdrop" id="settingsBackdrop"></div>
+<div class="modal" id="settingsModal">
+  <div class="modal-head">
+    <div class="modal-title">Connection &amp; Settings</div>
+    <button class="icon-btn" id="btnCloseSettings">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="field-group">
+      <label class="field-label">Ollama Server</label>
+      <div class="field-row">
+        <input id="srvHost" class="field-input" placeholder="127.0.0.1" value="127.0.0.1" />
+        <span class="field-colon">:</span>
+        <input id="srvPort" class="field-input port" placeholder="11434" value="11434" />
+      </div>
+      <div class="field-hint">Default Ollama port is 11434. For Termux on-device, use 127.0.0.1. For another device on Wi-Fi, use that device's LAN IP.</div>
+      <button class="field-btn" id="btnTestConn">Test Connection</button>
+      <div id="connStatus" class="conn-status"></div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Active Model</label>
+      <select id="settingsModelSelect" class="field-select"><option>No models found</option></select>
+    </div>
+
+<div class="field-group row-between">
+      <label class="field-label" style="margin:0">RAG (retrieve from attached files)</label>
+      <label class="switch"><input type="checkbox" id="ragToggle" /><span class="slider-pill"></span></label>
+    </div>
+    <div class="field-group" id="embedModelRow">
+      <label class="field-label">Embedding Model</label>
+      <input id="embedModel" class="field-input" placeholder="nomic-embed-text" value="nomic-embed-text" />
+      <div class="field-hint">Pull once with <code>ollama pull nomic-embed-text</code>. Attached files are chunked, embedded, and the most relevant chunks are retrieved per question instead of dumping the whole file into context. Falls back to a raw dump automatically if this model isn't available.</div>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Tool calling (calculator, time, system stats, memory)</label>
+      <label class="switch"><input type="checkbox" id="toolsToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Structured JSON output</label>
+      <label class="switch"><input type="checkbox" id="jsonModeToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Long-term Memory</label>
+      <div class="gxd-memory-list" id="memoryList"></div>
+      <div class="gxd-memory-add">
+        <input id="memoryInput" class="field-input" placeholder="e.g. I prefer Arabic replies" />
+        <button class="field-btn" id="btnMemoryAdd" style="margin:0;width:auto;padding:12px 16px;">Add</button>
+      </div>
+      <div class="field-hint">Facts LATIF remembers across every chat — auto-injected into the system prompt.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Performance Mode</label>
+      <div class="seg-control wide" id="perfSeg">
+        <button class="seg-btn" data-perf="fast">⚡ Fast</button>
+        <button class="seg-btn active" data-perf="balanced">⚖️ Balanced</button>
+        <button class="seg-btn" data-perf="quality">💎 Quality</button>
+      </div>
+      <div class="field-hint" id="perfHint">Balanced: 4K context, up to 512 tokens per reply. Good mix of speed and depth on this device.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Keep Model Loaded</label>
+      <select id="keepAliveSelect" class="field-select">
+        <option value="5m">5 minutes (Ollama default)</option>
+        <option value="30m" selected>30 minutes — recommended</option>
+        <option value="2h">2 hours</option>
+        <option value="-1">Forever (until server restart)</option>
+      </select>
+      <div class="field-hint">Keeping the model resident avoids the ~10–30s reload you'll otherwise hit on every message. "Forever" uses the most RAM.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">System Prompt</label>
+      <textarea id="systemPromptInput" class="field-textarea" rows="4" placeholder="You are LATIF AI...">You are LATIF AI (لطيف للذكاء الاصطناعي), a helpful, precise local AI assistant created by Latif Mohamed. Respond in the user's language (Arabic or English). Be concise, accurate, and well-formatted using markdown.</textarea>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Temperature: <span id="tempVal">0.7</span></label>
+      <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.7" class="field-range" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Context Window: <span id="ctxVal">4096</span> tokens</label>
+      <input type="range" id="ctxSlider" min="512" max="32768" step="512" value="4096" class="field-range" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Top P: <span id="topPVal">0.9</span></label>
+      <input type="range" id="topPSlider" min="0.1" max="1" step="0.05" value="0.9" class="field-range" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Max Reply Length: <span id="predictVal">512</span> tokens</label>
+      <input type="range" id="predictSlider" min="64" max="2048" step="64" value="512" class="field-range" />
+      <div class="field-hint">Lower = faster replies. On this device, 256–512 tokens is a comfortable ceiling.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Voice Mode Language</label>
+      <div class="seg-control wide" id="voiceLangSeg">
+        <button class="seg-btn active" data-lang="auto">Auto</button>
+        <button class="seg-btn" data-lang="ar-SA">العربية</button>
+        <button class="seg-btn" data-lang="en-US">English</button>
+      </div>
+      <div class="field-hint">Speech recognition quality depends on your device's installed voice/TTS packs and may use your phone's on-device or Google speech engine — LATIF AI itself never sends anything to the cloud.</div>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Auto-speak replies in chat</label>
+      <label class="switch"><input type="checkbox" id="autoSpeakToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Stream responses</label>
+      <label class="switch"><input type="checkbox" id="streamToggle" checked /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Theme</label>
+      <div class="seg-control" id="themeSeg">
+        <button class="seg-btn active" data-theme="dark">Dark</button>
+        <button class="seg-btn" data-theme="light">Light</button>
+        <button class="seg-btn" data-theme="amoled">AMOLED</button>
+      </div>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Use system dynamic color <span class="gxd-dyncolor-swatch" id="dynColorSwatch"></span></label>
+      <label class="switch"><input type="checkbox" id="dynColorToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">GX Mods</label>
+      <div class="mod-grid" id="modGrid"></div>
+      <div class="field-hint">Opera GX-style mods restyle the whole app from a real <code>manifest.json</code> (Opera's public mod schema) — theme HSL, live wallpaper, WebGL shader glow, glass panels, procedural &amp; file-based sounds. Drop a new folder in <code>/mods/</code> to add your own.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Shader FX Intensity</label>
+      <div class="seg-control wide" id="fxSeg">
+        <button class="seg-btn" data-fx="off">Off</button>
+        <button class="seg-btn" data-fx="low">Low</button>
+        <button class="seg-btn active" data-fx="med">Med</button>
+        <button class="seg-btn" data-fx="high">High</button>
+      </div>
+      <div class="field-hint">Full-screen WebGL scanline/vignette/grain overlay. Auto-lowers if your device's fps drops below ~40, and falls back to a lightweight CSS scanline if WebGL isn't available.</div>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Adaptive background music</label>
+      <label class="switch"><input type="checkbox" id="gxAmbientToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group row-between">
+      <label class="field-label" style="margin:0">Focus mode (dim chrome)</label>
+      <label class="switch"><input type="checkbox" id="gxFocusToggle" /><span class="slider-pill"></span></label>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">System Monitor <span style="text-transform:none;font-weight:500;color:var(--text-faint)">(Termux backend)</span></label>
+      <div class="field-row">
+        <input id="monitorUrl" class="field-input" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+        <button class="field-btn" id="btnMonitorRefresh" style="margin:0;width:auto;padding:12px 16px;">↻</button>
+      </div>
+      <div id="monitorBody" style="margin-top:12px;"></div>
+      <div class="field-hint">Reads live CPU / RAM / battery / Ollama VRAM from <code>backend/stats.py</code> running in Termux (<code>uvicorn stats:app --port 8000</code>). Hidden automatically if the backend isn't reachable.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Voice Backend</label>
+      <div class="seg-control wide" id="voiceBackendSeg">
+        <button class="seg-btn active" data-backend="web">Browser (Web Speech)</button>
+        <button class="seg-btn" data-backend="whisper">whisper.cpp (Termux)</button>
+      </div>
+      <div class="field-row" id="whisperUrlRow" style="margin-top:10px; display:none;">
+        <input id="whisperUrl" class="field-input" placeholder="http://127.0.0.1:8001" value="http://127.0.0.1:8001" />
+      </div>
+      <div class="field-hint">whisper.cpp gives offline Arabic/English transcription with no dependency on Google's speech engine — run <code>backend/transcribe.py</code> in Termux (<code>uvicorn transcribe:app --port 8001</code>).</div>
+    </div>
+
+    <div class="field-group">
+      <button class="field-btn danger" id="btnWipeData">Clear All Conversations</button>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Offline Cache</label>
+      <div class="cache-status-cards">
+        <div class="status-card">
+          <div class="status-value" id="cacheSizeDisplay">—</div>
+          <div class="status-label">Cache Size</div>
+        </div>
+        <div class="status-card">
+          <div class="status-value" id="cacheCountDisplay">0</div>
+          <div class="status-label">Responses</div>
+        </div>
+      </div>
+      <div class="field-hint">The app automatically caches chat responses when Ollama is available. If the server goes offline, you can search cached responses.</div>
+    </div>
+
+    <div class="field-group">
+      <div class="button-group">
+        <button class="field-btn" id="btnViewCacheStats">View Details</button>
+        <button class="field-btn danger" id="btnClearCache">Clear Cache</button>
+      </div>
+    </div>
+
+    <div class="about-block">
+      <div class="about-logo">⟡</div>
+      <div class="about-name">LATIF AI</div>
+      <div class="about-sub">لطيف للذكاء الاصطناعي · LATIF GX V3</div>
+      <div class="about-sub2">100% on-device inference via Ollama · Zero cloud dependency</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ CACHE STATISTICS MODAL (V3) ════════════ -->
+<div class="modal-backdrop" id="cacheStatsBackdrop"></div>
+<div class="modal" id="cacheStatsModal">
+  <div class="modal-head">
+    <div class="modal-title">Cache Statistics</div>
+    <button class="icon-btn" id="btnCloseCacheStats">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="field-group">
+      <div class="stat-row">
+        <span class="stat-name">Total Size:</span>
+        <span class="stat-value" id="cacheTotalSize">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-name">Entries:</span>
+        <span class="stat-value" id="cacheTotalEntries">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-name">Oldest Entry:</span>
+        <span class="stat-value" id="cacheOldestEntry">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-name">Newest Entry:</span>
+        <span class="stat-value" id="cacheNewestEntry">—</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Recent Entries</label>
+      <div id="cacheEntryList" class="cache-entry-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ CALENDAR & REMINDERS MODAL (V3) ════════════ -->
+<div class="modal-backdrop" id="calendarBackdrop"></div>
+<div class="modal" id="calendarModal">
+  <div class="modal-head">
+    <div class="modal-title">Calendar &amp; Reminders</div>
+    <button class="icon-btn" id="btnCloseCalendar">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="field-group">
+      <div class="cal-nav">
+        <button class="icon-btn small" id="calPrevMonth" aria-label="Previous month">
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="cal-month-label" id="calMonthLabel">Month</div>
+        <button class="icon-btn small" id="calNextMonth" aria-label="Next month">
+          <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="cal-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="cal-grid" id="calMonthGrid"></div>
+      <div class="field-hint">Dots mark days with conversations. Tap a day to filter history below.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" id="calHistoryTitle">Recent conversations</label>
+      <div class="gxd-memory-list" id="calHistoryList"></div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Scheduled Prompts</label>
+      <div class="gxd-memory-list" id="calReminderList"></div>
+      <input id="calReminderPrompt" class="field-input" placeholder="e.g. Give me a daily briefing" style="margin-bottom:8px;" />
+      <div class="field-row" style="margin-bottom:8px;">
+        <input id="calReminderTime" type="time" class="field-input" value="09:00" />
+        <select id="calReminderRepeat" class="field-select" style="flex:0 0 120px;">
+          <option value="once">Once</option>
+          <option value="daily" selected>Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+      <button class="field-btn" id="btnAddReminder">Schedule</button>
+      <div class="field-hint">Fires while LATIF is open (foreground or background tab) — a fully-closed app can't wake itself from the web layer alone. See ARCHITECTURE.md for the native alarm hook that completes this in the packaged app.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ TOAST ════════════ -->
+<div class="toast" id="toast"></div>
+
+<script src="js/error-logger.js"></script>
+<script src="js/file-validator.js"></script>
+<script src="js/ai-core.js"></script>
+<script src="js/request-queue.js"></script>
+<script src="js/search-index.js"></script>
+<script src="js/offline-cache.js"></script>
+<script src="js/data-validator.js"></script>
+<script src="js/data-layer.js"></script>
+<script src="js/message-compression.js"></script>
+<script src="js/hybrid-rag.js"></script>
+<script src="js/reranker.js"></script>
+<script src="js/agent-framework.js"></script>
+<script src="js/builtin-agents.js"></script>
+<script src="js/knowledge-graph.js"></script>
+<script src="js/vision-ai.js"></script>
+<script src="js/workflows.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/fx-shader.js"></script>
+<script src="js/mod-engine.js"></script>
+<script src="app.js"></script>
+<script src="js/gx-settings.js"></script>
+<script src="js/stats-gauges.js"></script>
+<script src="js/voice-backend.js"></script>
+<script src="js/android16.js"></script>
+<script src="js/calendar.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

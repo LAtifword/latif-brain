@@ -1,0 +1,14 @@
+{
+  "name": "Research Workflow",
+  "nodes": [
+    {"id": "start", "type": "task", "name": "Start"},
+    {"id": "search", "type": "task", "name": "Search"},
+    {"id": "analyze", "type": "task", "name": "Analyze"},
+    {"id": "report", "type": "task", "name": "Generate Report"}
+  ],
+  "edges": [
+    {"source": "start", "target": "search"},
+    {"source": "search", "target": "analyze"},
+    {"source": "analyze", "target": "report"}
+  ]
+}

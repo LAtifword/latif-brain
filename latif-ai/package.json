@@ -1,0 +1,14 @@
+{
+  "name": "latif-gx",
+  "version": "3.0.0",
+  "description": "LATIF AI — Opera GX-styled, 100% on-device AI assistant (Ollama/llama.cpp), packaged as a PWA for WebToApp/Android, desktop, and web.",
+  "private": true,
+  "author": "Latif Mohamed",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "python3 -m http.server 8099"
+  },
+  "engines": {
+    "note": "No build step — static files only, served as-is. `npm start` is a convenience dev server."
+  }
+}
