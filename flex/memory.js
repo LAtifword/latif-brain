@@ -2,8 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 export class MemoryStore {
-  constructor(file = process.env.FLEX_MEMORY_FILE || './data/flex-memory.json') {
-    this.file = path.resolve(file);
+  constructor(file = process.env.FLEX_MEMORY_FILE || 'flex-memory.json') {
+    const rootDir = path.resolve('./data');
+    const candidate = path.resolve(rootDir, String(file || 'flex-memory.json'));
+    const safePrefix = rootDir.endsWith(path.sep) ? rootDir : rootDir + path.sep;
+    this.file = (candidate === rootDir || candidate.startsWith(safePrefix))
+      ? candidate
+      : path.join(rootDir, 'flex-memory.json');
     this.items = [];
   }
 
