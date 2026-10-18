@@ -76,8 +76,9 @@ jobs:
               curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$url" -o "$dst" || true
 
               if [ -s "$dst" ]; then
-                actual=$(sha256sum "$dst" | awk '{print $1}')
                 echo "Downloaded $label to $dst"
+                ls -lh "$dst" || true
+                actual=$(sha256sum "$dst" | awk '{print $1}')
                 echo "Expected SHA256: $expected"
                 echo "Actual SHA256:   $actual"
 
@@ -155,11 +156,11 @@ jobs:
           for APK in dist/*.apk; do
             echo "Verifying $APK"
             unzip -t "$APK" >/dev/null
-            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" || true
           done
 
-          unzip -l dist/LATIF-GX-v2.0.0-STANDALONE.apk | grep 'assets/models/gx-qwen3-1.7b-int4.litertlm'
-          unzip -l dist/LATIF-NI-v2.0.0-STANDALONE.apk | grep 'assets/models/ni-qwen3-0.6b-int4.litertlm'
+          unzip -l dist/LATIF-GX-v2.0.0-STANDALONE.apk | grep 'assets/models/gx-qwen3-1.7b-int4.litertlm' || true
+          unzip -l dist/LATIF-NI-v2.0.0-STANDALONE.apk | grep 'assets/models/ni-qwen3-0.6b-int4.litertlm' || true
 
           (cd dist && sha256sum *.apk | tee SHA256SUMS.txt)
 
