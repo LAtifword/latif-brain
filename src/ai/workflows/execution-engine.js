@@ -517,10 +517,14 @@ export class WorkflowScheduler {
 // Export singleton scheduler
 export const workflowScheduler = new WorkflowScheduler();
 
-// Start periodic tick only in non-test environments to avoid leaving active timers
-// during Jest runs. Production code can still run scheduled workflows normally.
+// Start periodic tick
+// Don't start the background tick during test runs — prevents Jest worker hang.
 if (process.env.NODE_ENV !== 'test') {
   setInterval(async () => {
-    await workflowScheduler.tick();
+    try {
+      await workflowScheduler.tick();
+    } catch (err) {
+      logger.error('Scheduled tick failed', err);
+    }
   }, 60000); // Run every minute
 }
