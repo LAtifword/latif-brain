@@ -36,6 +36,20 @@ WHISPER_BIN = os.environ.get("WHISPER_BIN", os.path.expanduser("~/whisper.cpp/bu
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", os.path.expanduser("~/whisper.cpp/models/ggml-small.bin"))
 WHISPER_LANG = os.environ.get("WHISPER_LANG", "auto")  # "ar" forces Arabic, "auto" detects
 
+ALLOWED_WHISPER_BINS = {
+    os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli"),
+    "whisper-cli",
+}
+
+
+def _validated_whisper_bin(bin_value: str) -> str:
+    if bin_value not in ALLOWED_WHISPER_BINS:
+        raise ValueError("Invalid WHISPER_BIN value")
+    return bin_value
+
+
+WHISPER_BIN = _validated_whisper_bin(WHISPER_BIN)
+
 
 @app.post("/transcribe")
 async def transcribe(audio: UploadFile = File(...)):
