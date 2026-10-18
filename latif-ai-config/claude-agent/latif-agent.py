@@ -178,7 +178,7 @@ class LatifAgent:
         """Search knowledge graph"""
         try:
             response = await self.client.get(
-                f"{self.backend_url}/api/knowledge/search",
+                "/api/knowledge/search",
                 params={"query": query, "limit": limit}
             )
             return response.json()
