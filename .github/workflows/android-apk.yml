@@ -76,9 +76,8 @@ jobs:
               curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$url" -o "$dst" || true
 
               if [ -s "$dst" ]; then
-                echo "Downloaded $label to $dst"
-                ls -lh "$dst" || true
                 actual=$(sha256sum "$dst" | awk '{print $1}')
+                echo "Downloaded $label to $dst"
                 echo "Expected SHA256: $expected"
                 echo "Actual SHA256:   $actual"
 
