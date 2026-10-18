@@ -9,6 +9,7 @@ import httpx
 import logging
 from typing import Any, Dict, Optional
 from datetime import datetime
+from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,11 +20,29 @@ class LatifAgent:
 
     def __init__(self, backend_url: str = None):
         """Initialize the agent"""
-        self.backend_url = backend_url or os.getenv("LATIF_BACKEND_URL", "http://127.0.0.1:8000")
+        raw_backend_url = backend_url or os.getenv("LATIF_BACKEND_URL", "http://127.0.0.1:8000")
+        self.backend_url = self._validate_backend_url(raw_backend_url)
         self.client = httpx.AsyncClient(timeout=60.0)
         self.model = "llama2"
         self.temperature = 0.7
         self.max_tokens = 2048
+
+    def _validate_backend_url(self, backend_url: str) -> str:
+        """Validate and normalize backend URL to prevent SSRF."""
+        parsed = urlparse(backend_url)
+
+        if parsed.scheme not in {"http", "https"}:
+            raise ValueError("LATIF_BACKEND_URL must use http or https")
+        if not parsed.hostname:
+            raise ValueError("LATIF_BACKEND_URL must include a valid hostname")
+        if parsed.params or parsed.query or parsed.fragment:
+            raise ValueError("LATIF_BACKEND_URL must not include params, query, or fragment")
+
+        allowed_hosts = {"127.0.0.1", "localhost"}
+        if parsed.hostname not in allowed_hosts:
+            raise ValueError("LATIF_BACKEND_URL host is not in the allowed list")
+
+        return f"{parsed.scheme}://{parsed.netloc}"
 
     async def send_message(
         self,
