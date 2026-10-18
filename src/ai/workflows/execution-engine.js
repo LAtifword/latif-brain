@@ -117,7 +117,7 @@ export class WorkflowDefinition {
 
     // Check for orphaned nodes
     this.nodes.forEach((node, nodeId) => {
-      if (!this.hasPath(nodeId)) {
+      if (this.nodes.size > 1 && !this.hasPath(nodeId)) {
         errors.push(`Node ${node.name} is orphaned`);
       }
     });
@@ -232,6 +232,10 @@ export class WorkflowExecution {
     this.startTime = Date.now();
 
     try {
+      const validation = this.workflow.validate();
+      if (!validation.valid) {
+        throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`);
+      }
       const executionOrder = this.workflow.getExecutionOrder();
 
       for (const node of executionOrder) {
