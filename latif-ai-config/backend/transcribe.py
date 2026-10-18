@@ -32,23 +32,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-WHISPER_BIN = os.environ.get("WHISPER_BIN", os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli"))
+DEFAULT_WHISPER_BIN = os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli")
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", os.path.expanduser("~/whisper.cpp/models/ggml-small.bin"))
 WHISPER_LANG = os.environ.get("WHISPER_LANG", "auto")  # "ar" forces Arabic, "auto" detects
 
 ALLOWED_WHISPER_BINS = {
-    os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli"),
-    "whisper-cli",
+    DEFAULT_WHISPER_BIN: DEFAULT_WHISPER_BIN,
+    "whisper-cli": "whisper-cli",
 }
 
 
-def _validated_whisper_bin(bin_value: str) -> str:
-    if bin_value not in ALLOWED_WHISPER_BINS:
+def _resolved_whisper_bin_from_env() -> str:
+    configured = os.environ.get("WHISPER_BIN")
+    if configured is None:
+        return DEFAULT_WHISPER_BIN
+    resolved = ALLOWED_WHISPER_BINS.get(configured)
+    if resolved is None:
         raise ValueError("Invalid WHISPER_BIN value")
-    return bin_value
+    return resolved
 
 
-WHISPER_BIN = _validated_whisper_bin(WHISPER_BIN)
+WHISPER_BIN = _resolved_whisper_bin_from_env()
 
 
 @app.post("/transcribe")
