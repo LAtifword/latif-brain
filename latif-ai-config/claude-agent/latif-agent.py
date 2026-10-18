@@ -240,7 +240,7 @@ class LatifAgent:
     async def health_check(self) -> Dict[str, Any]:
         """Check system health"""
         try:
-            response = await self.client.get(f"{self.backend_url}/health")
+            response = await self.client.get("/health")
             return response.json()
         except Exception as e:
             logger.error(f"Error checking health: {e}")
