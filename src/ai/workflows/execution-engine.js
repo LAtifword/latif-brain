@@ -1,4 +1,4 @@
-/**
+/*
  * Workflow Execution Engine (Phase 6)
  * DAG-based workflow execution with scheduling and state management
  */
