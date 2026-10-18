@@ -3,6 +3,7 @@ name: Android APK Suite
 on:
   push:
     branches:
+      - latif-brain
       - main
       - build/all-ready-apks
       - standalone-native-ai
@@ -11,12 +12,16 @@ on:
       - 'latif-ai/**'
       - 'src/dashboards/**'
       - '.github/workflows/android-apk.yml'
+      - 'tools/verify-apk-model.py'
+      - 'tests/test_apk_model_verifier.py'
   pull_request:
     paths:
       - 'android/**'
       - 'latif-ai/**'
       - 'src/dashboards/**'
       - '.github/workflows/android-apk.yml'
+      - 'tools/verify-apk-model.py'
+      - 'tests/test_apk_model_verifier.py'
   workflow_dispatch:
 
 permissions:
@@ -29,14 +34,16 @@ jobs:
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      ALLOW_MODEL_CHECK_FAIL: 'true'
-      GX_MODEL_URL: https://huggingface.co/litert-community/Qwen3-1.7B/resolve/main/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm?download=true
-      GX_MODEL_SHA256: 2eeffef7b51bc3e1225ea69fe7aa5f417397934b56a5b6c20cc068d6fd2c918b
-      NI_MODEL_URL: https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm?download=true
-      NI_MODEL_SHA256: e3e290109da4388d65a17510a0c66af91c8039f52d2c465868dbc43c09a776cf
+      GX_MODEL_URL: https://huggingface.co/litert-community/Qwen3-1.7B/resolve/79bf0667b32ae025b972e5fe555fe72ca6e8816c/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm?download=true
+      GX_MODEL_SHA256: 2a72330b504a6596d53a2c00923c57173b10f1b83e6a541213ffec08d1fc5de8
+      NI_MODEL_URL: https://huggingface.co/litert-community/Qwen3-0.6B/resolve/e6687177e00897731e7716267eebd4eba0dde7c2/Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm?download=true
+      NI_MODEL_SHA256: 03e7da1eb1108b50dffaa9bb52cc7bcbad2eb0c66ca990267f480c1e545d2856
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Test embedded-model verification
+        run: python3 -m unittest discover -s tests -p 'test_apk_model_verifier.py' -v
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
@@ -65,7 +72,7 @@ jobs:
           NI_DIR="android/webapps/src/ni/assets/models"
           mkdir -p "$GX_DIR" "$NI_DIR"
 
-          verify_or_warn() {
+          verify_model() {
             local url="$1"
             local dst="$2"
             local expected="$3"
@@ -82,11 +89,7 @@ jobs:
                 echo "Actual SHA256:   $actual"
 
                 if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then
-                  echo "WARNING: checksum mismatch for $label. The remote artifact changed."
-                  if [ "${ALLOW_MODEL_CHECK_FAIL:-false}" = "true" ]; then
-                    echo "ALLOW_MODEL_CHECK_FAIL=true so the workflow will continue with the downloaded file."
-                    return 0
-                  fi
+                  echo "ERROR: checksum mismatch for $label. Refusing unverified model."
                   echo "Checksum mismatch detected for $label, re-trying." >&2
                   rm -f "$dst"
                   sleep 2
@@ -104,15 +107,11 @@ jobs:
             done
 
             echo "ERROR: unable to fetch or verify $label after retries" >&2
-            if [ "${ALLOW_MODEL_CHECK_FAIL:-false}" = "true" ]; then
-              echo "ALLOW_MODEL_CHECK_FAIL=true so the workflow is continuing in warning mode." >&2
-              return 0
-            fi
             return 1
           }
 
-          verify_or_warn "$GX_MODEL_URL" "$GX_DIR/gx-qwen3-1.7b-int4.litertlm" "$GX_MODEL_SHA256" "GX model"
-          verify_or_warn "$NI_MODEL_URL" "$NI_DIR/ni-qwen3-0.6b-int4.litertlm" "$NI_MODEL_SHA256" "NI model"
+          verify_model "$GX_MODEL_URL" "$GX_DIR/gx-qwen3-1.7b-int4.litertlm" "$GX_MODEL_SHA256" "GX model"
+          verify_model "$NI_MODEL_URL" "$NI_DIR/ni-qwen3-0.6b-int4.litertlm" "$NI_MODEL_SHA256" "NI model"
 
           ls -lh "$GX_DIR" "$NI_DIR"
 
@@ -155,11 +154,11 @@ jobs:
           for APK in dist/*.apk; do
             echo "Verifying $APK"
             unzip -t "$APK" >/dev/null
-            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" || true
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           done
 
-          unzip -l dist/LATIF-GX-v2.0.0-STANDALONE.apk | grep 'assets/models/gx-qwen3-1.7b-int4.litertlm' || true
-          unzip -l dist/LATIF-NI-v2.0.0-STANDALONE.apk | grep 'assets/models/ni-qwen3-0.6b-int4.litertlm' || true
+          python3 tools/verify-apk-model.py dist/LATIF-GX-v2.0.0-STANDALONE.apk assets/models/gx-qwen3-1.7b-int4.litertlm "$GX_MODEL_SHA256"
+          python3 tools/verify-apk-model.py dist/LATIF-NI-v2.0.0-STANDALONE.apk assets/models/ni-qwen3-0.6b-int4.litertlm "$NI_MODEL_SHA256"
 
           (cd dist && sha256sum *.apk | tee SHA256SUMS.txt)
 
