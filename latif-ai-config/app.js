@@ -260,7 +260,7 @@ function pickVoiceFor(lang) {
 function speakText(text, opts = {}) {
   if (!("speechSynthesis" in window)) { toast("Speech not supported"); return; }
   window.speechSynthesis.cancel();
-  const clean = text.replace(/[*#`_~|]/g, "").replace(/<[^>]+>/g, "");
+  const clean = text.replace(/[*#`_~|]/g, "").replace(/[<>]/g, "");
   if (!clean.trim()) { if (opts.onend) opts.onend(); return; }
   const lang = opts.lang || (isArabic(clean) ? "ar-SA" : "en-US");
   const utter = new SpeechSynthesisUtterance(clean);
