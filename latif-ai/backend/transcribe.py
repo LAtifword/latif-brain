@@ -32,9 +32,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-WHISPER_BIN = os.environ.get("WHISPER_BIN", os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli"))
+DEFAULT_WHISPER_BIN = os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli")
+WHISPER_BIN = os.environ.get("WHISPER_BIN", DEFAULT_WHISPER_BIN)
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", os.path.expanduser("~/whisper.cpp/models/ggml-small.bin"))
 WHISPER_LANG = os.environ.get("WHISPER_LANG", "auto")  # "ar" forces Arabic, "auto" detects
+
+
+def _normalize_path(path: str) -> str:
+    return os.path.realpath(os.path.expanduser(path))
+
+
+_ALLOWED_WHISPER_BINS = {
+    _normalize_path(DEFAULT_WHISPER_BIN),
+    _normalize_path("~/whisper.cpp/main"),
+    _normalize_path("~/whisper.cpp/build/bin/main"),
+}
+WHISPER_BIN = _normalize_path(WHISPER_BIN)
+if WHISPER_BIN not in _ALLOWED_WHISPER_BINS:
+    raise ValueError("Invalid WHISPER_BIN: must be one of the approved whisper.cpp binaries.")
 
 
 @app.post("/transcribe")
