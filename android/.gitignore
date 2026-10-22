@@ -1,0 +1,72 @@
+# Gradle
+.gradle/
+build/
+*.gradle.kts.bak
+
+# Android Studio
+.idea/
+.classpath
+.project
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.project
+.cproject
+.c9resolve
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.previewdata
+
+# Android
+*.apk
+*.ap_
+*.dex
+*.class
+*.jar
+*.so
+*.aar
+
+# Local configuration file
+local.properties
+
+# Build output
+bin/
+gen/
+build/
+.gradle/
+
+# IDE
+*.iml
+*.swp
+*.swo
+*~
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Backups
+*.bak
+*.backup
+*~
+
+# Keystore
+*.keystore
+*.jks
+release.properties
+release.keystore

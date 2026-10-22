@@ -1,0 +1,101 @@
+"""
+LATIF AI — Offline Arabic/English STT backend (run in Termux)
+
+Wraps whisper.cpp so the app's Voice Backend (js/voice-backend.js) can
+transcribe fully offline instead of relying on the browser's Web Speech
+API (which uses Google's cloud speech service on Android).
+
+Build whisper.cpp first (Termux):
+    pkg install -y git cmake clang make ffmpeg
+    git clone --depth 1 https://github.com/ggerganov/whisper.cpp
+    cd whisper.cpp
+    bash ./models/download-ggml-model.sh small     # or medium/large-v3 for better Arabic
+    cmake -S . -B build -DGGML_NO_OPENMP=ON
+    cmake --build build -j"$(nproc)"
+
+Configure the paths below (or override via environment variables), then:
+    pip install -r requirements.txt
+    uvicorn transcribe:app --host 127.0.0.1 --port 80
+    
+import os
+import subprocess
+import tempfile
+
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(title="LATIF AI Voice Backend (whisper.cpp)")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["POST"],
+    allow_headers=["*"],
+)
+
+DEFAULT_WHISPER_BIN = os.path.expanduser("~/whisper.cpp/build/bin/whisper-cli")
+ build/all-ready-apks
+WHISPER_BIN = os.environ.get("WHISPER_BIN", DEFAULT_WHISPER_BIN)
+
+ latif-brain
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", os.path.expanduser("~/whisper.cpp/models/ggml-small.bin"))
+WHISPER_LANG = os.environ.get("WHISPER_LANG", "auto")  # "ar" forces Arabic, "auto" detects
+
+
+def _normalize_path(path: str) -> str:
+    return os.path.realpath(os.path.expanduser(path))
+
+
+_ALLOWED_WHISPER_BINS = {
+ build/all-ready-apks
+    _normalize_path(DEFAULT_WHISPER_BIN),
+    _normalize_path("~/whisper.cpp/main"),
+    _normalize_path("~/whisper.cpp/build/bin/main"),
+}
+WHISPER_BIN = _normalize_path(WHISPER_BIN)
+if WHISPER_BIN not in _ALLOWED_WHISPER_BINS:
+    raise ValueError("Invalid WHISPER_BIN: must be one of the approved whisper.cpp binaries.")
+
+    "whisper-cli": _normalize_path(DEFAULT_WHISPER_BIN),
+    "main": _normalize_path("~/whisper.cpp/main"),
+    "build-main": _normalize_path("~/whisper.cpp/build/bin/main"),
+}
+WHISPER_BIN_NAME = os.environ.get("WHISPER_BIN_NAME", "whisper-cli")
+if WHISPER_BIN_NAME not in _ALLOWED_WHISPER_BINS:
+    raise ValueError("Invalid WHISPER_BIN_NAME: must be one of whisper-cli, main, build-main.")
+WHISPER_BIN = _ALLOWED_WHISPER_BINS[WHISPER_BIN_NAME]
+ latif-brain
+
+
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    with tempfile.TemporaryDirectory() as tmp:
+        in_path = os.path.join(tmp, "in.webm")
+        wav_path = os.path.join(tmp, "out.wav")
+        out_prefix = os.path.join(tmp, "out")
+
+        with open(in_path, "wb") as f:
+            f.write(await audio.read())
+
+        # whisper.cpp expects 16kHz mono WAV; browsers record WebM/Opus.
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", in_path, "-ar", "16000", "-ac", "1", wav_path],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            [WHISPER_BIN, "-m", WHISPER_MODEL, "-f", wav_path, "-l", WHISPER_LANG,
+             "-otxt", "-of", out_prefix, "-nt"],
+            check=True, capture_output=True,
+        )
+
+        txt_path = out_prefix + ".txt"
+        text = ""
+        if os.path.exists(txt_path):
+            with open(txt_path, encoding="utf-8") as f:
+                text = f.read().strip()
+
+        return {"text": text}
+
+
+@app.get("/health")
+def health():
+    return {"ok": True, "model": WHISPER_MODEL, "lang": WHISPER_LANG}

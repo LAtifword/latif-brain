@@ -1,0 +1,24 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+
+    - name: Clone LATIF repository
+      git:
+        repo: https://github.com/LAtifword/latif-brain.git
+        dest: /opt/latif
+
+    - name: Install dependencies
+      npm:
+        path: /opt/latif
+        state: present
+
+    - name: Start LATIF service
+      systemd:
+        name: latif
+        state: started
+        enabled: yes

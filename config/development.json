@@ -1,0 +1,81 @@
+{
+  "app": {
+    "name": "LATIF",
+    "version": "5.0.0",
+    "debug": true,
+    "port": 3000,
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "path": "./latif.db",
+    "maxConnections": 5,
+    "timeout": 5000,
+    "enableWAL": true
+  },
+  "logging": {
+    "level": "debug",
+    "dir": "./logs",
+    "maxFileSize": 10485760,
+    "maxFiles": 5,
+    "transports": ["console", "file"]
+  },
+  "jobs": {
+    "concurrency": 2,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "maxTimeout": 300000,
+    "queues": ["default", "background", "priority"]
+  },
+  "agents": {
+    "maxConcurrent": 2,
+    "defaultTimeout": 300000,
+    "memoryLimit": 256,
+    "maxIterations": 10
+  },
+  "api": {
+    "cors": {
+      "enabled": true,
+      "origins": ["http://localhost:3000", "http://localhost:8080"]
+    },
+    "rateLimit": {
+      "enabled": false,
+      "windowMs": 60000,
+      "max": 100
+    },
+    "auth": {
+      "enabled": false,
+      "jwtSecret": "dev-secret-change-in-production"
+    }
+  },
+  "features": {
+    "agentSystem": true,
+    "workflowEngine": true,
+    "knowledgeGraph": true,
+    "visionAI": false,
+    "voiceInterface": false,
+    "documentIntelligence": true,
+    "browserAutomation": false,
+    "pluginSystem": true
+  },
+  "storage": {
+    "maxUploadSize": 104857600,
+    "uploadDir": "./uploads",
+    "tempDir": "./temp"
+  },
+  "ai": {
+    "defaultModel": "ollama",
+    "embedding": {
+      "model": "all-MiniLM-L6-v2",
+      "dimension": 384
+    },
+    "reranker": {
+      "enabled": false,
+      "model": "cross-encoder/ms-marco-MiniLM-L-12-v2"
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "metricsPort": 9090,
+    "healthCheckInterval": 30000
+  }
+}

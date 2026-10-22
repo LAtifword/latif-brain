@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: latif
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: latif
+  template:
+    metadata:
+      labels:
+        app: latif
+    spec:
+      containers:
+      - name: latif
+        image: latif:5.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_ENV
+          value: production

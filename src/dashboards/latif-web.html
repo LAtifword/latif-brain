@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LATIF — Local AI Operating System</title>
+  <style>
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* TOKEN SYSTEM: Color, Type, Spacing */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    :root {
+      /* Synthwave: Default (loaded first) */
+      --color-primary: #FF10F0;
+      --color-secondary: #00D9FF;
+      --color-bg-dark: #0a0014;
+      --color-bg-panel: #1a0033;
+      --color-bg-input: #220044;
+      --color-text-primary: #ffffff;
+      --color-text-secondary: #b0b0b0;
+      --color-border: #440088;
+      --color-accent-error: #FF2020;
+
+      /* Typography */
+      --font-mono: "Courier New", monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      /* Spacing */
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+
+      /* Z-index */
+      --z-header: 1000;
+      --z-sidebar: 900;
+      --z-modal: 2000;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-primary: #FF10F0;
+        --color-secondary: #00D9FF;
+        --color-bg-dark: #0a0014;
+        --color-bg-panel: #1a0033;
+        --color-bg-input: #220044;
+        --color-text-primary: #ffffff;
+        --color-text-secondary: #b0b0b0;
+        --color-border: #440088;
+      }
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --color-primary: #D000CC;
+        --color-secondary: #0099CC;
+        --color-bg-dark: #f8f6ff;
+        --color-bg-panel: #f0ecff;
+        --color-bg-input: #ebe6ff;
+        --color-text-primary: #1a1a1a;
+        --color-text-secondary: #555555;
+        --color-border: #d4c5ff;
+      }
+    }
+
+    :root[data-theme="synthwave"] {
+      --color-primary: #FF10F0;
+      --color-secondary: #00D9FF;
+      --color-bg-dark: #0a0014;
+      --color-bg-panel: #1a0033;
+      --color-bg-input: #220044;
+      --color-text-primary: #ffffff;
+      --color-text-secondary: #b0b0b0;
+      --color-border: #440088;
+    }
+
+    :root[data-theme="matrix"] {
+      --color-primary: #00FF41;
+      --color-secondary: #00ff88;
+      --color-bg-dark: #0a0e27;
+      --color-bg-panel: #0f1624;
+      --color-bg-input: #141b2e;
+      --color-text-primary: #00ff41;
+      --color-text-secondary: #00aa22;
+      --color-border: #003300;
+      --color-accent-error: #FF2020;
+    }
+
+    :root[data-theme="underwave"] {
+      --color-primary: #B84FD9;
+      --color-secondary: #1a5f6d;
+      --color-bg-dark: #0a1318;
+      --color-bg-panel: #0f1b24;
+      --color-bg-input: #132835;
+      --color-text-primary: #e8f0ff;
+      --color-text-secondary: #9ab0c5;
+      --color-border: #1a3d52;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* RESET & BASE STYLES */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: var(--font-sans);
+      background-color: var(--color-bg-dark);
+      color: var(--color-text-primary);
+      line-height: 1.5;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+    }
+
+    input {
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* LAYOUT: Sidebar + Main */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    #app {
+      display: flex;
+      height: 100vh;
+      flex-direction: row;
+    }
+
+    #sidebar {
+      width: 280px;
+      background-color: var(--color-bg-panel);
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* HEADER */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    #header {
+      background-color: var(--color-bg-panel);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--spacing-md);
+      display: flex;
+      gap: var(--spacing-md);
+      align-items: center;
+      z-index: var(--z-header);
+    }
+
+    .header-logo {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-primary);
+      letter-spacing: 2px;
+      flex: 0 0 auto;
+    }
+
+    .header-spacer {
+      flex: 1;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: center;
+    }
+
+    .theme-switcher {
+      display: flex;
+      gap: 4px;
+      background-color: var(--color-bg-dark);
+      border-radius: 2px;
+      padding: 2px;
+      border: 1px solid var(--color-border);
+    }
+
+    .theme-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
+      background-color: transparent;
+      color: var(--color-text-secondary);
+      transition: all 0.2s;
+    }
+
+    .theme-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .theme-btn.active {
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+      border-color: var(--color-primary);
+      font-weight: bold;
+    }
+
+    .settings-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    .settings-btn:hover {
+      color: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* SIDEBAR: Chat History & Settings */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    .sidebar-section {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .sidebar-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-secondary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+      border-radius: 2px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: bold;
+      transition: opacity 0.2s;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .new-chat-btn:hover {
+      opacity: 0.9;
+    }
+
+    #chatHistory {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+
+    .chat-item {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background-color: var(--color-bg-dark);
+      border: 1px solid transparent;
+      border-radius: 2px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .chat-item:hover {
+      background-color: var(--color-bg-input);
+      color: var(--color-text-primary);
+      border-color: var(--color-border);
+    }
+
+    .chat-item.active {
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+      font-weight: bold;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* MAIN: Chat Area */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    #chatArea {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--spacing-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .message {
+      display: flex;
+      gap: var(--spacing-md);
+      max-width: 90%;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .message.user .message-avatar {
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+    }
+
+    .message.assistant .message-avatar {
+      background-color: var(--color-secondary);
+      color: var(--color-bg-dark);
+    }
+
+    .message-content {
+      background-color: var(--color-bg-panel);
+      padding: var(--spacing-md);
+      border-radius: 2px;
+      border: 1px solid var(--color-border);
+      font-size: 14px;
+      line-height: 1.6;
+      word-wrap: break-word;
+    }
+
+    .message.user .message-content {
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+      border-color: var(--color-primary);
+    }
+
+    #emptyState {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-lg);
+      color: var(--color-text-secondary);
+      text-align: center;
+    }
+
+    .empty-logo {
+      font-family: var(--font-mono);
+      font-size: 48px;
+      color: var(--color-primary);
+      letter-spacing: 2px;
+      opacity: 0.3;
+    }
+
+    .empty-text {
+      font-size: 14px;
+      max-width: 300px;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* INPUT AREA */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    #inputArea {
+      padding: var(--spacing-lg);
+      background-color: var(--color-bg-panel);
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      gap: var(--spacing-md);
+    }
+
+    .model-selector {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background-color: var(--color-bg-input);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      color: var(--color-text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .model-selector:hover {
+      border-color: var(--color-primary);
+    }
+
+    #messageInput {
+      flex: 1;
+      background-color: var(--color-bg-input);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      padding: var(--spacing-md);
+      color: var(--color-text-primary);
+      font-size: 14px;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+    }
+
+    #messageInput::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    #messageInput:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .send-btn {
+      padding: var(--spacing-md) var(--spacing-lg);
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 2px;
+      transition: opacity 0.2s;
+      flex: 0 0 auto;
+      align-self: flex-end;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* SETTINGS PANEL */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    #settingsPanel {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: var(--z-modal);
+      align-items: center;
+      justify-content: center;
+    }
+
+    #settingsPanel.open {
+      display: flex;
+    }
+
+    .settings-modal {
+      background-color: var(--color-bg-panel);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      padding: var(--spacing-lg);
+      max-width: 400px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .settings-header {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: var(--spacing-lg);
+      color: var(--color-primary);
+      letter-spacing: 1px;
+    }
+
+    .settings-group {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .settings-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-secondary);
+      margin-bottom: var(--spacing-sm);
+      display: block;
+    }
+
+    .settings-input {
+      width: 100%;
+      padding: var(--spacing-md);
+      background-color: var(--color-bg-input);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      color: var(--color-text-primary);
+      font-size: 13px;
+    }
+
+    .settings-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .settings-hint {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      margin-top: var(--spacing-sm);
+    }
+
+    .settings-button-group {
+      display: flex;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-lg);
+    }
+
+    .settings-button-group button {
+      flex: 1;
+      padding: var(--spacing-md);
+      border: 1px solid var(--color-border);
+      border-radius: 2px;
+      background-color: var(--color-bg-input);
+      color: var(--color-text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .settings-button-group button:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    .settings-button-group .close-btn {
+      background-color: var(--color-primary);
+      color: var(--color-bg-dark);
+      border-color: var(--color-primary);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* SCROLLBAR STYLING */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background-color: var(--color-bg-dark);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--color-border);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: var(--color-primary);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* RESPONSIVE */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    @media (max-width: 768px) {
+      #sidebar {
+        display: none;
+      }
+
+      #app.sidebar-open #sidebar {
+        display: flex;
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 850;
+      }
+
+      .message {
+        max-width: 100%;
+      }
+    }
+
+    /* Respect prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="sidebar-section">
+        <button class="new-chat-btn">+ New Chat</button>
+        <div class="sidebar-title">History</div>
+        <div id="chatHistory"></div>
+      </div>
+      <div class="sidebar-section" style="flex-shrink: 0; border-bottom: none;">
+        <div class="sidebar-title">Settings</div>
+        <button class="settings-btn" style="width: 100%;">⚙ Configure</button>
+      </div>
+    </div>
+
+    <!-- MAIN CHAT AREA -->
+    <div id="main">
+      <!-- HEADER -->
+      <div id="header">
+        <div class="header-logo">LATIF</div>
+        <div class="header-spacer"></div>
+        <div class="header-controls">
+          <div class="theme-switcher">
+            <button class="theme-btn active" data-theme="synthwave">SYNTHWAVE</button>
+            <button class="theme-btn" data-theme="matrix">MATRIX</button>
+            <button class="theme-btn" data-theme="underwave">UNDERWAVE</button>
+          </div>
+          <button class="settings-btn">⚙</button>
+        </div>
+      </div>
+
+      <!-- CHAT MESSAGES -->
+      <div id="chatArea">
+        <div id="emptyState">
+          <div class="empty-logo">◇ LATIF ◇</div>
+          <div class="empty-text">
+            Local AI Operating System<br>
+            <span style="font-size: 12px; opacity: 0.6;">Running locally • No backend required</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- INPUT AREA -->
+      <div id="inputArea">
+        <select class="model-selector" id="modelSelect">
+          <option value="demo">Demo Mode</option>
+          <option value="qwen">Qwen 2.5:7B</option>
+          <option value="llama">Llama 2</option>
+        </select>
+        <textarea id="messageInput" placeholder="Ask anything..."></textarea>
+        <button class="send-btn" id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsPanel">
+    <div class="settings-modal">
+      <div class="settings-header">Settings</div>
+
+      <div class="settings-group">
+        <label class="settings-label">Backend URL</label>
+        <input type="text" class="settings-input" id="backendUrl" placeholder="http://localhost:3000">
+        <div class="settings-hint">
+          If you're running LATIF locally, enter your server URL here. Leave blank for demo mode.
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="settings-label">Ollama Host</label>
+        <input type="text" class="settings-input" id="ollamaHost" placeholder="http://127.0.0.1:11434">
+        <div class="settings-hint">
+          URL to your Ollama server. Required for real AI responses.
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="settings-label">Status</label>
+        <div style="padding: var(--spacing-md); background-color: var(--color-bg-dark); border-radius: 2px; font-size: 13px;">
+          <div id="connectionStatus">• Checking connection...</div>
+        </div>
+      </div>
+
+      <div class="settings-button-group">
+        <button onclick="saveSettings()">Save</button>
+        <button class="close-btn" onclick="closeSettings()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* STATE MANAGEMENT */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    const State = {
+      messages: [],
+      currentChat: null,
+      theme: 'synthwave',
+      model: 'demo',
+      backendUrl: localStorage.getItem('latif_backendUrl') || 'http://localhost:3000',
+      ollamaHost: localStorage.getItem('latif_ollamaHost') || 'http://127.0.0.1:11434',
+      chats: JSON.parse(localStorage.getItem('latif_chats')) || []
+    };
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* THEME SWITCHING */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    function setTheme(theme) {
+      State.theme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('latif_theme', theme);
+
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === theme);
+      });
+    }
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('latif_theme') || 'synthwave';
+    setTheme(savedTheme);
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* SETTINGS PANEL */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    function openSettings() {
+      document.getElementById('backendUrl').value = State.backendUrl;
+      document.getElementById('ollamaHost').value = State.ollamaHost;
+      document.getElementById('settingsPanel').classList.add('open');
+      checkBackendStatus();
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsPanel').classList.remove('open');
+    }
+
+    async function checkBackendStatus() {
+      try {
+        const response = await fetch(State.ollamaHost + '/api/tags', {
+          method: 'GET',
+          timeout: 2000
+        });
+        const status = response.ok ? 'Connected ✓' : 'Not Found';
+        document.getElementById('connectionStatus').textContent = `• Ollama: ${status}`;
+      } catch {
+        document.getElementById('connectionStatus').textContent = '• Ollama: Disconnected';
+      }
+    }
+
+    function saveSettings() {
+      State.backendUrl = document.getElementById('backendUrl').value || 'http://localhost:3000';
+      State.ollamaHost = document.getElementById('ollamaHost').value || 'http://127.0.0.1:11434';
+      localStorage.setItem('latif_backendUrl', State.backendUrl);
+      localStorage.setItem('latif_ollamaHost', State.ollamaHost);
+      closeSettings();
+      checkBackendStatus();
+    }
+
+    document.querySelectorAll('.settings-btn').forEach(btn => {
+      btn.addEventListener('click', openSettings);
+    });
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* CHAT FUNCTIONALITY */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    function addMessage(content, role) {
+      State.messages.push({ content, role, timestamp: Date.now() });
+      renderMessages();
+    }
+
+    function renderMessages() {
+      const chatArea = document.getElementById('chatArea');
+
+      if (State.messages.length === 0) {
+        chatArea.innerHTML = `
+          <div id="emptyState">
+            <div class="empty-logo">◇ LATIF ◇</div>
+            <div class="empty-text">
+              Local AI Operating System<br>
+              <span style="font-size: 12px; opacity: 0.6;">Running locally • No backend required</span>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      chatArea.innerHTML = State.messages.map(msg => `
+        <div class="message ${msg.role}">
+          <div class="message-avatar">${msg.role === 'user' ? 'YOU' : 'AI'}</div>
+          <div class="message-content">${escapeHtml(msg.content)}</div>
+        </div>
+      `).join('');
+
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const content = input.value.trim();
+
+      if (!content) return;
+
+      addMessage(content, 'user');
+      input.value = '';
+
+      document.getElementById('sendBtn').disabled = true;
+
+      // Demo response
+      if (State.model === 'demo') {
+        setTimeout(() => {
+          addMessage(`Demo response to: "${content}".\n\nTo enable real AI responses, configure your Ollama host in Settings.`, 'assistant');
+          document.getElementById('sendBtn').disabled = false;
+        }, 800);
+        return;
+      }
+
+      // Try real backend
+      try {
+        const response = await fetch(State.backendUrl + '/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: State.messages,
+            model: State.model
+          })
+        });
+
+        const data = await response.json();
+        addMessage(data.message?.content || 'No response', 'assistant');
+      } catch (err) {
+        addMessage(`Error: ${err.message}\n\nEnsure your backend is running at ${State.backendUrl}`, 'assistant');
+      } finally {
+        document.getElementById('sendBtn').disabled = false;
+      }
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('messageInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    /* UTILITIES */
+    /* ─────────────────────────────────────────────────────────────────── */
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // New chat button
+    document.querySelector('.new-chat-btn').addEventListener('click', () => {
+      State.messages = [];
+      State.currentChat = null;
+      renderMessages();
+      document.getElementById('messageInput').focus();
+    });
+
+    // Initial render
+    renderMessages();
+  </script>
+</body>
+</html>
