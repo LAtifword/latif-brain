@@ -77,7 +77,7 @@ export async function getAppliedMigrations() {
 
   try {
     const migrations = await db.all(
-      `SELECT version, name, applied_at FROM schema_migrations ORDER BY applied_at DESC`
+      'SELECT version, name, applied_at FROM schema_migrations ORDER BY applied_at DESC'
     );
     return migrations || [];
   } catch (error) {
@@ -102,7 +102,7 @@ export async function verifySchema() {
 
     for (const table of tables) {
       const result = await db.get(
-        `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+        'SELECT name FROM sqlite_master WHERE type=\'table\' AND name=?',
         [table]
       );
 
@@ -138,7 +138,7 @@ export async function getSchemaStats() {
 
   try {
     const tables = await db.all(
-      `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`
+      'SELECT name FROM sqlite_master WHERE type=\'table\' ORDER BY name'
     );
 
     const stats = {};
@@ -166,7 +166,7 @@ export async function resetSchema() {
   try {
     // Get all tables
     const tables = await db.all(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
+      'SELECT name FROM sqlite_master WHERE type=\'table\' AND name NOT LIKE \'sqlite_%\''
     );
 
     // Drop all tables
