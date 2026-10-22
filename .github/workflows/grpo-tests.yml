@@ -1,0 +1,29 @@
+name: GRPO Math Tests
+
+on:
+  push:
+    paths:
+      - 'tools/grpo/**'
+      - '.github/workflows/grpo-tests.yml'
+  pull_request:
+    paths:
+      - 'tools/grpo/**'
+      - '.github/workflows/grpo-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate Python syntax
+        run: python -m compileall -q tools/grpo
+      - name: Test reward math (Torch tests skipped unless installed)
+        run: python -m unittest discover -s tools/grpo/tests -p 'test_*.py' -v
+      - name: Smoke test CLI
+        run: printf '%s\n' '{"groups":[[1,2,3],[5,5]]}' | python -m tools.grpo
