@@ -1,4 +1,4 @@
-/**
+/*
  * Workflow Execution Engine (Phase 6)
  * DAG-based workflow execution with scheduling and state management
  */
@@ -233,6 +233,10 @@ export class WorkflowExecution {
     this.startTime = Date.now();
 
     try {
+      const validation = this.workflow.validate();
+      if (!validation.valid) {
+        throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`);
+      }
       const executionOrder = this.workflow.getExecutionOrder();
 
       for (const node of executionOrder) {
@@ -515,6 +519,13 @@ export class WorkflowScheduler {
 export const workflowScheduler = new WorkflowScheduler();
 
 // Start periodic tick
-setInterval(async () => {
-  await workflowScheduler.tick();
-}, 60000); // Run every minute
+// Don't start the background tick during test runs — prevents Jest worker hang.
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(async () => {
+    try {
+      await workflowScheduler.tick();
+    } catch (err) {
+      logger.error('Scheduled tick failed', err);
+    }
+  }, 60000); // Run every minute
+}

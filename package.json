@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/main.js",
+    "flex": "node flex/server.js",
     "dev": "NODE_ENV=development node src/main.js",
     "backend": "node src/services/LATIF-NI-BACKEND-SERVICE.js",
     "dashboard": "node src/main.js && echo '\\n✓ Dashboard available at http://localhost:3001'",
@@ -23,8 +24,7 @@
     "docs": "node tools/generate-docs.js",
     "lint": "eslint src tests tools",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"tools/**/*.js\"",
-    "typecheck": "tsc --noEmit",
-    "prepare": "node tools/setup.js"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "ai",
@@ -48,7 +48,7 @@
   },
   "homepage": "https://github.com/LAtifword/latif-brain#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "exports": {
     ".": "./src/core/ai-core.js",
@@ -69,7 +69,7 @@
     "openai": "^6.48.0",
     "pino": "^8.0.0",
     "sqlite3": "^5.1.6",
-    "uuid": "^9.0.0",
+    "uuid": "^14.0.1",
     "ws": "^8.14.0"
   },
   "devDependencies": {
@@ -87,7 +87,7 @@
     "typescript": "^5.0.0",
     "webpack": "^5.88.0",
     "webpack-cli": "^5.1.0",
-    "webpack-dev-server": "^4.15.0"
+    "webpack-dev-server": "^6.0.0"
   },
   "jest": {
     "testEnvironment": "node",
@@ -114,7 +114,7 @@
         "@babel/preset-env",
         {
           "targets": {
-            "node": "18"
+            "node": "20"
           }
         }
       ]

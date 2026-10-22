@@ -5,37 +5,50 @@
 
 import { loggerProxy as logger } from '../core/logger.js';
 import { getConfig } from '../core/config.js';
+import { getOfflineCache } from '../core/offline-cache.js';
 
 class AICore {
   constructor() {
     this.config = null;
     this.model = null;
-    this.provider = null;
     this.streaming = false;
     this.temperature = 0.7;
     this.maxTokens = 2048;
     this.modelList = [];
+
+    // Auto-detection state
+    this.serverAvailable = false;
+    this.lastKnownWorkingServer = null;
+    this.serverCheckInProgress = false;
+    this.serverCheckTimestamp = 0;
+    this.ollamaDiscoveryStatus = 'unchecked';
+    this.discoveredOllamaHost = null;
   }
 
   async initialize() {
     try {
       this.config = getConfig();
-      this.provider = this.config.get('llm.provider') || 'ollama';
       this.model = this.config.get('llm.model') || 'qwen2.5:1.5b';
       this.temperature = this.config.get('llm.temperature') || 0.7;
       this.maxTokens = this.config.get('llm.maxTokens') || 2048;
       this.streaming = this.config.get('llm.streaming') !== false;
 
-      logger.info('AI Core initialized', {
-        provider: this.provider,
+      logger.info('AI Core initialized (Ollama)', {
         model: this.model,
         streaming: this.streaming,
         temperature: this.temperature,
         maxTokens: this.maxTokens
       });
 
+      // Auto-detect server availability
+      await this.autoDetectServer();
+
       // Fetch available models
-      await this.refreshModels();
+      if (this.serverAvailable) {
+        await this.refreshModels();
+      } else {
+        logger.warn('Ollama server not available - running in offline mode');
+      }
     } catch (error) {
       logger.error('AI Core initialization failed', { error: error.message });
       throw error;
@@ -44,7 +57,7 @@ class AICore {
 
   async refreshModels() {
     try {
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.ollamaEndpoint();
       const response = await fetch(`${endpoint}/api/tags`, {
         timeout: 5000
       });
@@ -57,8 +70,7 @@ class AICore {
       this.modelList = data.models || data.results || [];
 
       logger.info('Models refreshed', {
-        count: this.modelList.length,
-        provider: this.provider
+        count: this.modelList.length
       });
 
       return this.modelList;
@@ -68,15 +80,64 @@ class AICore {
     }
   }
 
-  getProviderEndpoint() {
-    if (this.provider === 'ollama') {
-      const host = this.config.get('llm.host') || 'localhost';
-      const port = this.config.get('llm.port') || 11434;
-      return `http://${host}:${port}`;
-    } else if (this.provider === 'openai') {
-      return 'https://api.openai.com/v1';
+  ollamaEndpoint() {
+    const host = this.config.get('llm.host') || 'localhost';
+    const port = this.config.get('llm.port') || 11434;
+    return `http://${host}:${port}`;
+  }
+
+  async autoDetectServer() {
+    if (this.serverCheckInProgress) return;
+
+    const now = Date.now();
+    if (now - this.serverCheckTimestamp < 30000) return; // Rate limit: 30s
+
+    this.serverCheckInProgress = true;
+    this.serverCheckTimestamp = now;
+
+    try {
+      const fallbackChain = [
+        `http://127.0.0.1:11434`,
+        `http://localhost:11434`,
+        `http://192.168.1.1:11434`, // Common router IP
+        this.lastKnownWorkingServer
+      ].filter(Boolean);
+
+      for (const endpoint of fallbackChain) {
+        try {
+          const response = await fetch(`${endpoint}/api/tags`, {
+            timeout: 2000
+          });
+
+          if (response.ok) {
+            this.serverAvailable = true;
+            this.lastKnownWorkingServer = endpoint;
+            this.discoveredOllamaHost = endpoint;
+            this.ollamaDiscoveryStatus = 'discovered';
+
+            logger.info('Ollama server auto-detected', {
+              endpoint,
+              status: 'available'
+            });
+            return true;
+          }
+        } catch (err) {
+          logger.debug('Server detection failed', {
+            endpoint,
+            error: err.message
+          });
+        }
+      }
+
+      this.serverAvailable = false;
+      this.ollamaDiscoveryStatus = 'not-found';
+      logger.warn('Ollama server not detected', {
+        attemptedEndpoints: fallbackChain.length
+      });
+      return false;
+    } finally {
+      this.serverCheckInProgress = false;
     }
-    throw new Error(`Unsupported provider: ${this.provider}`);
   }
 
   async chat(messages, options = {}) {
@@ -86,7 +147,7 @@ class AICore {
       const temperature = options.temperature || this.temperature;
       const maxTokens = options.maxTokens || this.maxTokens;
 
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.discoveredOllamaHost || this.ollamaEndpoint();
       const requestBody = this.buildRequestBody(
         model,
         messages,
@@ -110,46 +171,61 @@ class AICore {
         return this.handleStreamingResponse(response);
       } else {
         const data = await response.json();
-        return {
+        const result = {
           model: data.model || model,
-          content: data.message?.content || data.choices?.[0]?.message?.content || '',
+          content: data.message?.content || '',
           stopReason: data.done ? 'stop' : 'length',
           tokens: {
             prompt: data.prompt_eval_count || 0,
             completion: data.eval_count || 0,
             total: (data.prompt_eval_count || 0) + (data.eval_count || 0)
-          }
+          },
+          fromCache: false
         };
+
+        // Cache response for offline fallback
+        try {
+          const cache = await getOfflineCache();
+          await cache.saveChatResponse(messages, model, result.content);
+        } catch (cacheError) {
+          logger.debug('Failed to cache response', { error: cacheError.message });
+        }
+
+        return result;
       }
     } catch (error) {
       logger.error('Chat failed', { error: error.message });
+
+      // Try offline cache fallback
+      try {
+        const cached = await this.searchOfflineCache(messages);
+        if (cached) {
+          logger.info('Using cached response (offline mode)');
+          return cached;
+        }
+      } catch (cacheError) {
+        logger.debug('Offline cache search failed', { error: cacheError.message });
+      }
+
+      // Attempt re-detection on error
+      this.serverAvailable = false;
+      await this.autoDetectServer();
       throw error;
     }
   }
 
   buildRequestBody(model, messages, temperature, maxTokens, streaming) {
-    if (this.provider === 'ollama') {
-      return {
-        model,
-        messages,
-        stream: streaming,
+    return {
+      model,
+      messages,
+      stream: streaming,
+      temperature,
+      num_predict: maxTokens,
+      options: {
         temperature,
-        num_predict: maxTokens,
-        options: {
-          temperature,
-          num_predict: maxTokens
-        }
-      };
-    } else if (this.provider === 'openai') {
-      return {
-        model,
-        messages,
-        stream: streaming,
-        temperature,
-        max_tokens: maxTokens
-      };
-    }
-    throw new Error(`Unsupported provider: ${this.provider}`);
+        num_predict: maxTokens
+      }
+    };
   }
 
   async *handleStreamingResponse(response) {
@@ -172,38 +248,22 @@ class AICore {
           try {
             const json = JSON.parse(line);
 
-            if (this.provider === 'ollama') {
-              if (json.message?.content) {
-                yield {
-                  type: 'content',
-                  content: json.message.content
-                };
-              }
-              if (json.done) {
-                yield {
-                  type: 'done',
-                  model: json.model,
-                  tokens: {
-                    prompt: json.prompt_eval_count || 0,
-                    completion: json.eval_count || 0,
-                    total: (json.prompt_eval_count || 0) + (json.eval_count || 0)
-                  }
-                };
-              }
-            } else if (this.provider === 'openai') {
-              const delta = json.choices?.[0]?.delta;
-              if (delta?.content) {
-                yield {
-                  type: 'content',
-                  content: delta.content
-                };
-              }
-              if (json.choices?.[0]?.finish_reason) {
-                yield {
-                  type: 'done',
-                  stopReason: json.choices[0].finish_reason
-                };
-              }
+            if (json.message?.content) {
+              yield {
+                type: 'content',
+                content: json.message.content
+              };
+            }
+            if (json.done) {
+              yield {
+                type: 'done',
+                model: json.model,
+                tokens: {
+                  prompt: json.prompt_eval_count || 0,
+                  completion: json.eval_count || 0,
+                  total: (json.prompt_eval_count || 0) + (json.eval_count || 0)
+                }
+              };
             }
           } catch (parseError) {
             logger.debug('Stream line parse error', { line, error: parseError.message });
@@ -233,11 +293,7 @@ class AICore {
 
   async embeddings(texts) {
     try {
-      if (this.provider !== 'ollama') {
-        throw new Error('Embeddings only supported for Ollama');
-      }
-
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.ollamaEndpoint();
       const results = [];
 
       for (const text of texts) {
@@ -286,18 +342,6 @@ class AICore {
     return this.modelList;
   }
 
-  setProvider(providerName) {
-    if (!['ollama', 'openai', 'local'].includes(providerName)) {
-      throw new Error(`Unsupported provider: ${providerName}`);
-    }
-    this.provider = providerName;
-    logger.info('Provider changed', { provider: providerName });
-  }
-
-  getProvider() {
-    return this.provider;
-  }
-
   setStreaming(enabled) {
     this.streaming = !!enabled;
     logger.debug('Streaming changed', { enabled: this.streaming });
@@ -333,13 +377,74 @@ class AICore {
 
   async healthCheck() {
     try {
-      const endpoint = this.getProviderEndpoint();
+      const endpoint = this.discoveredOllamaHost || this.ollamaEndpoint();
       const response = await fetch(`${endpoint}/api/tags`, {
         timeout: 5000
       });
-      return response.ok;
+      const ok = response.ok;
+      if (ok) {
+        this.serverAvailable = true;
+      } else {
+        this.serverAvailable = false;
+      }
+      return ok;
     } catch (error) {
+      this.serverAvailable = false;
       return false;
+    }
+  }
+
+  getServerStatus() {
+    return {
+      available: this.serverAvailable,
+      lastKnownWorking: this.lastKnownWorkingServer,
+      discoveredHost: this.discoveredOllamaHost,
+      discoveryStatus: this.ollamaDiscoveryStatus,
+      endpoint: this.discoveredOllamaHost || this.ollamaEndpoint()
+    };
+  }
+
+  setServerAvailable(available) {
+    this.serverAvailable = available;
+    logger.debug('Server availability changed', { available });
+  }
+
+  isServerAvailable() {
+    return this.serverAvailable;
+  }
+
+  async searchOfflineCache(messages) {
+    try {
+      if (messages.length === 0) return null;
+
+      const lastUserMessage = messages[messages.length - 1]?.content || '';
+      if (!lastUserMessage) return null;
+
+      const cache = await getOfflineCache();
+      const results = await cache.searchCache(lastUserMessage, this.model, 0.5);
+
+      if (results.length === 0) return null;
+
+      const best = results[0];
+      const timestamp = new Date(best.timestamp).toLocaleTimeString();
+
+      logger.info('Cache hit', {
+        similarity: best.similarity,
+        timestamp,
+        modelName: best.modelName
+      });
+
+      return {
+        model: best.modelName,
+        content: `**[OFFLINE MODE]** Showing cached response from ${timestamp} — this may not reflect current context.\n\n${best.responseText}`,
+        stopReason: 'stop',
+        tokens: { prompt: 0, completion: 0, total: 0 },
+        fromCache: true,
+        cacheEntry: best
+      };
+    } catch (error) {
+      logger.debug('Offline cache search failed', { error: error.message });
+      return null;
     }
   }
 }
