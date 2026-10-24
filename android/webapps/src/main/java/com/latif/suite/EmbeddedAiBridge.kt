@@ -23,6 +23,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
@@ -47,6 +50,12 @@ class EmbeddedAiBridge(
     @Volatile private var backend = "none"
     @Volatile private var progress = 0
     @Volatile private var modelBytes = 0L
+    @Volatile private var activeModelLabel = BuildConfig.MODEL_LABEL
+    @Volatile private var extraState = "not_installed"
+    @Volatile private var extraProgress = 0
+    private val expandedUrl = "https://huggingface.co/litert-community/Qwen3-1.7B/resolve/79bf0667b32ae025b972e5fe555fe72ca6e8816c/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm?download=true"
+    private val expandedSha = "2a72330b504a6596d53a2c00923c57173b10f1b83e6a541213ffec08d1fc5de8"
+    private val expandedLabel = "Qwen3 1.7B INT4 · Optional"
 
     private var engine: Engine? = null
     private var conversation: Conversation? = null
@@ -64,7 +73,7 @@ class EmbeddedAiBridge(
     fun isAvailable(): Boolean = BuildConfig.LOCAL_AI_ENABLED
 
     @JavascriptInterface
-    fun modelLabel(): String = BuildConfig.MODEL_LABEL
+    fun modelLabel(): String = activeModelLabel
 
     @JavascriptInterface
     fun status(): String = JSONObject().apply {
@@ -75,7 +84,9 @@ class EmbeddedAiBridge(
         put("ready", state == "ready")
         put("busy", busy.get())
         put("backend", backend)
-        put("model", BuildConfig.MODEL_LABEL)
+        put("model", activeModelLabel)
+        put("extraModelState", extraState)
+        put("extraModelProgress", extraProgress)
         put("modelBytes", modelBytes)
     }.toString()
 
@@ -157,6 +168,134 @@ class EmbeddedAiBridge(
         return false
     }
 
+    /** Optional second LiteRT model: opt-in, pinned HTTPS source, pinned SHA-256. */
+    @JavascriptInterface
+    fun modelCatalog(): String {
+        val installed = File(File(activity.filesDir, "models"), "qwen3-1.7b-optional.litertlm").isFile
+        return JSONObject()
+            .put("embedded", BuildConfig.MODEL_LABEL)
+            .put("active", activeModelLabel)
+            .put("optional", if (BuildConfig.FLAVOR == "ni") expandedLabel else "Unavailable")
+            .put("installed", installed)
+            .put("state", extraState)
+            .put("progress", extraProgress)
+            .put("busy", busy.get())
+            .toString()
+    }
+
+    @JavascriptInterface
+    fun installExpandedModel(): Boolean {
+        if (BuildConfig.FLAVOR != "ni" || !BuildConfig.LOCAL_AI_ENABLED) return false
+        if (!busy.compareAndSet(false, true)) return false
+        worker.execute {
+            val modelDir = File(activity.filesDir, "models").apply { mkdirs() }
+            val target = File(modelDir, "qwen3-1.7b-optional.litertlm")
+            val temporary = File(modelDir, "qwen3-1.7b-optional.part")
+            try {
+                extraState = "downloading"
+                extraProgress = 0
+                emitStatus()
+                val digest = MessageDigest.getInstance("SHA-256")
+                if (modelDir.usableSpace < 2_000_000_000L) {
+                    error("At least 2 GB free storage is required for a safe model installation")
+                }
+                val conn = URL(expandedUrl).openConnection() as HttpURLConnection
+                conn.connectTimeout = 30000
+                conn.readTimeout = 60000
+                conn.instanceFollowRedirects = true
+                try {
+                    if (conn.responseCode != 200) error("Model server returned HTTP " + conn.responseCode)
+                    val expected = conn.contentLengthLong
+                    if (expected > 2_000_000_000L) error("Model exceeds maximum allowed download size")
+                    var received = 0L
+                    conn.inputStream.use { input ->
+                        temporary.outputStream().buffered().use { output ->
+                            val buffer = ByteArray(1024 * 1024)
+                            while (true) {
+                                val n = input.read(buffer)
+                                if (n < 0) break
+                                received += n
+                                if (received > 2_000_000_000L) error("Model download exceeded size limit")
+                                digest.update(buffer, 0, n)
+                                output.write(buffer, 0, n)
+                                if (expected > 0) extraProgress = (received * 99 / expected).toInt().coerceIn(0, 99)
+                            }
+                        }
+                    }
+                } finally { conn.disconnect() }
+                val actual = digest.digest().joinToString("") { "%02x".format(it) }
+                require(actual.equals(expandedSha, ignoreCase = true)) { "Model checksum mismatch; installation rejected" }
+                require(temporary.length() > 0) { "Empty optional model" }
+                if (target.exists()) target.delete()
+                check(temporary.renameTo(target)) { "Cannot finalize verified model" }
+                extraProgress = 100
+                extraState = "installed"
+                emitStatus()
+            } catch (error: Throwable) {
+                extraState = "error: " + (error.message ?: error.javaClass.simpleName)
+                emitStatus()
+            } finally {
+                temporary.delete()
+                busy.set(false)
+            }
+        }
+        return true
+    }
+
+    /** Restart inference on the selected verified model; restores bundled model on error. */
+    @JavascriptInterface
+    fun activateModel(name: String): Boolean {
+        if (BuildConfig.FLAVOR != "ni" || name !in listOf("embedded", "expanded")) return false
+        if (!busy.compareAndSet(false, true)) return false
+        worker.execute {
+            try {
+                val model = if (name == "expanded") {
+                    val file = File(File(activity.filesDir, "models"), "qwen3-1.7b-optional.litertlm")
+                    require(file.isFile) { "Install the expanded model before selecting it" }
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    file.inputStream().buffered().use { stream ->
+                        val buffer = ByteArray(1024 * 1024)
+                        while (true) {
+                            val n = stream.read(buffer)
+                            if (n < 0) break
+                            digest.update(buffer, 0, n)
+                        }
+                    }
+                    require(digest.digest().joinToString("") { "%02x".format(it) }.equals(expandedSha, true)) {
+                        "Expanded model integrity check failed"
+                    }
+                    file
+                } else extractBundledModel(BuildConfig.MODEL_ASSET)
+                setState("loading", "Switching local inference model", 50)
+                conversation?.close()
+                conversation = null
+                engine?.close()
+                engine = null
+                val gpu = tryCreateEngine(model, Backend.GPU(), "GPU")
+                engine = gpu ?: requireNotNull(tryCreateEngine(model, Backend.CPU(), "CPU")) { "Model engine not supported" }
+                backend = if (gpu == null) "CPU" else "GPU"
+                modelBytes = model.length()
+                activeModelLabel = if (name == "expanded") expandedLabel else BuildConfig.MODEL_LABEL
+                setState("ready", activeModelLabel + " ready on " + backend, 100)
+            } catch (err: Throwable) {
+                try {
+                    val fallback = extractBundledModel(BuildConfig.MODEL_ASSET)
+                    engine?.close()
+                    val gpu = tryCreateEngine(fallback, Backend.GPU(), "GPU")
+                    engine = gpu ?: tryCreateEngine(fallback, Backend.CPU(), "CPU")
+                    backend = if (gpu == null) "CPU" else "GPU"
+                    modelBytes = fallback.length()
+                    activeModelLabel = BuildConfig.MODEL_LABEL
+                    if (engine != null) setState("ready", "Restored embedded model after: " + (err.message ?: "model error"), 100)
+                    else setState("error", "Model load failed: " + (err.message ?: "unknown"), 0)
+                } catch (fallbackErr: Throwable) {
+                    setState("error", fallbackErr.message ?: "Model recovery failed", 0)
+                }
+            } finally { busy.set(false) }
+        }
+        return true
+    }
+
     /** Real device telemetry for LATIF NI. No random/demo values. */
     @JavascriptInterface
     fun deviceStats(): String {
@@ -183,7 +322,7 @@ class EmbeddedAiBridge(
             put("aiBackend", backend)
             put("aiReady", state == "ready")
             put("aiBusy", busy.get())
-            put("model", BuildConfig.MODEL_LABEL)
+            put("model", activeModelLabel)
             put("modelBytes", modelBytes)
             put("gpuPercent", readGpuPercent())
         }.toString()
