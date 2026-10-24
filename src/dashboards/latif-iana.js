@@ -78,7 +78,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.style.display
 show('browse');
 
 node('p',models,'Optional local AI model · uses the existing LiteRT-LM runtime. No third-party shell packages.');
-const modelStatus=node('pre',models,'Loading model status…');modelStatus.id='li-output';
+const modelStatus=node('pre',models,'Loading model status…');modelStatus.style.cssText='white-space:pre-wrap;padding:12px;background:#091d2d;border:1px solid #2b455b;border-radius:10px';
 function refreshModels(){
 try{
 if(!window.LATIF_AI || !window.LATIF_AI.modelCatalog){modelStatus.textContent='Native model manager not available in this build';return;}
