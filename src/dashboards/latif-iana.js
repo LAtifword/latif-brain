@@ -34,9 +34,10 @@ const panel=node('section',document.body);panel.id='li-panel';panel.setAttribute
 const head=node('div',panel);head.id='li-top';node('strong',head,'IANA Protocol Intelligence');btn(head,'Close',close);
 const body=node('div',panel);body.id='li-body';
 const nav=node('div',body);
-const browse=node('section',body),tools=node('section',body);
+const browse=node('section',body),tools=node('section',body),models=node('section',body);
 btn(nav,'Registry Search',()=>show('browse'));
 btn(nav,'Local Security Tools',()=>show('tools'));
+btn(nav,'AI Model Manager',()=>{show('models');refreshModels();});
 const status=node('div',browse,'Offline registry archive');status.id='li-status';
 const query=node('input',browse);query.placeholder='Search DNS, TLS, TCP, ports, MIME, OAuth…';query.type='search';
 const results=node('div',browse);results.id='li-results';
@@ -63,7 +64,7 @@ data.forEach(x=>item(x.name,String(x.records)+' records · '+x.family,x.source))
 status.textContent=data.length+' categories shown · search includes all available registries';
 }catch(e){status.textContent=e.message;}
 }
-function show(mode){browse.style.display=mode==='browse'?'block':'none';tools.style.display=mode==='tools'?'block':'none';}
+function show(mode){browse.style.display=mode==='browse'?'block':'none';tools.style.display=mode==='tools'?'block':'none';models.style.display=mode==='models'?'block':'none';}
 function open(){
 panel.style.display='flex';launch.style.display='none';
 try{const info=JSON.parse(window.LATIF_IANA.info());
@@ -75,6 +76,34 @@ query.focus();
 function close(){panel.style.display='none';launch.style.display='block';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.style.display==='flex')close();});
 show('browse');
+
+node('p',models,'Optional local AI model · uses the existing LiteRT-LM runtime. No third-party shell packages.');
+const modelStatus=node('pre',models,'Loading model status…');modelStatus.id='li-output';
+function refreshModels(){
+try{
+if(!window.LATIF_AI || !window.LATIF_AI.modelCatalog){modelStatus.textContent='Native model manager not available in this build';return;}
+const m=JSON.parse(window.LATIF_AI.modelCatalog());
+modelStatus.textContent='Active: '+m.active+'\nBundled: '+m.embedded+
+'\nOptional: '+m.optional+'\nDownload: '+m.state+
+'\nProgress: '+m.progress+'%\nEngine busy: '+m.busy;
+}catch(e){modelStatus.textContent=e.message;}
+}
+btn(models,'Install verified Qwen3 1.7B (~1GB+ download)',()=>{
+if(!confirm('Download the optional Qwen3 1.7B LiteRT model to app-private storage? Requires approximately 2 GB free space and uses network data.'))return;
+try{const ok=window.LATIF_AI.installExpandedModel();modelStatus.textContent=ok?'Download started; check status while app stays open.':'Model engine is busy or unavailable.';}
+catch(e){modelStatus.textContent=e.message;}
+});
+btn(models,'Use expanded 1.7B model',()=>{
+try{modelStatus.textContent=window.LATIF_AI.activateModel('expanded')?'Verifying model and switching…':'Cannot switch while busy';}
+catch(e){modelStatus.textContent=e.message;}
+});
+btn(models,'Restore bundled 0.6B model',()=>{
+try{modelStatus.textContent=window.LATIF_AI.activateModel('embedded')?'Restoring bundled model…':'Cannot switch while busy';}
+catch(e){modelStatus.textContent=e.message;}
+});
+btn(models,'Refresh model status',refreshModels);
+window.addEventListener('latif-native-ai-status',()=>{if(models.style.display==='block')refreshModels();});
+
 node('p',tools,'All utilities run locally. No device scanning or remote requests.');
 const pick=node('select',tools);
 [['sha256','SHA-256 hash'],['json','JSON formatter/validator'],['base64e','Base64 UTF-8 encode'],
