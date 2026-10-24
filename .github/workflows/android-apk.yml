@@ -64,6 +64,25 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Verify IANA offline corpus builder
+        run: python3 -m unittest discover -s tests -p 'test_iana_offline.py' -v
+
+      - name: Archive at least 100 live IANA registry tables for LATIF NI
+        run: |
+          set -euo pipefail
+          python3 tools/build_iana_offline.py \
+            --output android/webapps/src/ni/assets/iana/registries.db \
+            --max-groups 180 --minimum 100 --workers 6
+          test -s android/webapps/src/ni/assets/iana/registries.db
+          python3 - <<'PY'
+          import sqlite3
+          db = sqlite3.connect('android/webapps/src/ni/assets/iana/registries.db')
+          n = db.execute('SELECT count(*) FROM registries WHERE count>0').fetchone()[0]
+          assert n >= 100, f'Insufficient indexed registries: {n}'
+          assert db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+          print('Verified offline IANA registries:', n)
+          PY
+
       - name: Download and verify embedded AI models
         shell: bash
         run: |
