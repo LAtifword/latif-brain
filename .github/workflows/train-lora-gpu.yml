@@ -25,6 +25,7 @@ jobs:
         run: |
           nvidia-smi
           test -s "${{ github.workspace }}/training/data/train.jsonl"
+          test -s "${{ github.workspace }}/training/data/validation.jsonl"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -35,8 +36,15 @@ jobs:
           TRAIN_STEPS: ${{ inputs.steps }}
         run: |
           python training/train_lora.py --model "$MODEL_NAME" --steps "$TRAIN_STEPS" --data training/data/train.jsonl --output artifacts/lora
+      - name: Evaluate held-out validation data
+        env:
+          MODEL_NAME: ${{ inputs.model }}
+        run: |
+          python training/evaluate_lora.py --model "$MODEL_NAME" --adapter artifacts/lora --data training/data/validation.jsonl
       - uses: actions/upload-artifact@v4
         with:
           name: latif-brain-lora-adapter
-          path: artifacts/lora/
+          path: |
+            artifacts/lora/
+            artifacts/evaluation.json
           retention-days: 14
