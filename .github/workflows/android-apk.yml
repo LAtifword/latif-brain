@@ -189,3 +189,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+      - name: Upload LATIF NI APK and registry provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: LATIF-NI-IANA-APK
+          path: |
+            dist/LATIF-NI-v2.0.0-STANDALONE.apk
+            dist/SHA256SUMS.txt
+            android/webapps/src/ni/assets/iana/registries.report.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
