@@ -35,6 +35,8 @@ def main():
     if args.steps < 1 or args.max_length < 32:
         raise ValueError("Invalid training settings")
     rows = load_rows(args.data)
+    if not Path(args.output).resolve().is_relative_to(Path("artifacts").resolve()):
+        raise ValueError("Output must remain within artifacts/")
     tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=False)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -46,10 +48,14 @@ def main():
         r=8, lora_alpha=16, lora_dropout=0.05, bias="none",
         task_type="CAUSAL_LM", target_modules=["q_proj", "v_proj"]
     ))
+    model.print_trainable_parameters()
     ds = Dataset.from_list(rows)
     def encode(batch):
         return tokenizer(batch["text"], truncation=True, max_length=args.max_length)
     ds = ds.map(encode, batched=True, remove_columns=["text"])
+    ds = ds.filter(lambda row: len(row["input_ids"]) >= 2)
+    if len(ds) < 10:
+        raise ValueError("Fewer than 10 usable tokenized examples")
     train_args = TrainingArguments(
         output_dir=args.output, max_steps=args.steps, per_device_train_batch_size=1,
         gradient_accumulation_steps=8, learning_rate=2e-4, logging_steps=10,
@@ -58,10 +64,13 @@ def main():
     )
     trainer = Trainer(model=model, args=train_args, train_dataset=ds,
                       data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False))
-    trainer.train()
+    result = trainer.train()
+    if trainer.state.global_step < 1 or not torch.isfinite(torch.tensor(result.training_loss)):
+        raise RuntimeError("No verified finite-loss optimizer updates")
     model.save_pretrained(args.output)
     tokenizer.save_pretrained(args.output)
     print(json.dumps({"status":"trained","adapter":args.output,
-                      "global_step":trainer.state.global_step}))
+                      "global_step":trainer.state.global_step,
+                      "training_loss":result.training_loss}))
 if __name__ == "__main__":
     main()
