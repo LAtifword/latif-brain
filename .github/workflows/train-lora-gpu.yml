@@ -1,0 +1,39 @@
+name: LATIF BRAIN LoRA GPU training
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Hugging Face base model (compatible Qwen2.5 architecture)
+        required: true
+        default: Qwen/Qwen2.5-0.5B-Instruct
+      steps:
+        description: Optimizer steps
+        required: true
+        default: '100'
+permissions:
+  contents: read
+jobs:
+  train:
+    runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check CUDA and dataset
+        run: |
+          nvidia-smi
+          test -s "${{ github.workspace }}/training/data/train.jsonl"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r training/requirements.txt datasets>=3
+      - name: Train adapter
+        run: |
+          python training/train_lora.py --model "${{ inputs.model }}" --steps "${{ inputs.steps }}" --data training/data/train.jsonl --output artifacts/lora
+      - uses: actions/upload-artifact@v4
+        with:
+          name: latif-brain-lora-adapter
+          path: artifacts/lora/
+          retention-days: 14
