@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
     private PermissionRequest pendingAudioPermissionRequest;
     private EmbeddedAiBridge aiBridge;
     private IanaBridge ianaBridge;
+    private NiProjectBridge niProjectBridge;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,7 +47,8 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+.addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/generated/", new WebViewAssetLoader.InternalStoragePathHandler(this, new java.io.File(getFilesDir(), "generated-projects")))
                 .build();
 
         webView.setWebViewClient(new WebViewClient() {
@@ -138,6 +140,8 @@ public class MainActivity extends Activity {
         aiBridge = new EmbeddedAiBridge(this, webView);
         webView.addJavascriptInterface(aiBridge, "LATIF_AI");
         if ("ni".equals(BuildConfig.FLAVOR)) {
+            niProjectBridge = new NiProjectBridge(this);
+            webView.addJavascriptInterface(niProjectBridge, "LATIF_PROJECTS");
             ianaBridge = new IanaBridge(this);
             webView.addJavascriptInterface(ianaBridge, "LATIF_IANA");
         }
@@ -213,7 +217,10 @@ public class MainActivity extends Activity {
         }
         if (webView != null) {
             webView.removeJavascriptInterface("LATIF_AI");
-            if ("ni".equals(BuildConfig.FLAVOR)) webView.removeJavascriptInterface("LATIF_IANA");
+            if ("ni".equals(BuildConfig.FLAVOR)) {
+                webView.removeJavascriptInterface("LATIF_IANA");
+                webView.removeJavascriptInterface("LATIF_PROJECTS");
+            }
             webView.loadUrl("about:blank");
             webView.stopLoading();
             webView.destroy();
