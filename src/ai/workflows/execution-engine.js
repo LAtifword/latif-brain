@@ -1,4 +1,4 @@
-/**
+/*
  * Workflow Execution Engine (Phase 6)
  * DAG-based workflow execution with scheduling and state management
  */
@@ -115,10 +115,11 @@ export class WorkflowDefinition {
       errors.push('Workflow contains cycle');
     }
 
-    // Check for orphaned nodes
-    this.nodes.forEach((node, nodeId) => {
-      if (!this.hasPath(nodeId)) {
-        errors.push(`Node ${node.name} is orphaned`);
+    // Standalone nodes are valid workflows. Only edges that reference missing
+    // nodes make a definition invalid.
+    this.edges.forEach(edge => {
+      if (!this.nodes.has(edge.sourceId) || !this.nodes.has(edge.targetId)) {
+        errors.push(`Edge ${edge.id} references a missing node`);
       }
     });
 
@@ -232,6 +233,10 @@ export class WorkflowExecution {
     this.startTime = Date.now();
 
     try {
+      const validation = this.workflow.validate();
+      if (!validation.valid) {
+        throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`);
+      }
       const executionOrder = this.workflow.getExecutionOrder();
 
       for (const node of executionOrder) {
@@ -514,6 +519,13 @@ export class WorkflowScheduler {
 export const workflowScheduler = new WorkflowScheduler();
 
 // Start periodic tick
-setInterval(async () => {
-  await workflowScheduler.tick();
-}, 60000); // Run every minute
+// Don't start the background tick during test runs — prevents Jest worker hang.
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(async () => {
+    try {
+      await workflowScheduler.tick();
+    } catch (err) {
+      logger.error('Scheduled tick failed', err);
+    }
+  }, 60000); // Run every minute
+}
