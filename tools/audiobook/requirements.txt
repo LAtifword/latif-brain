@@ -1,0 +1,10 @@
+# Audiobook generation pipeline dependencies
+# Install with: pip install -r tools/audiobook/requirements.txt
+#
+# NOTE: TTS (Coqui) pulls in torch and will download the multilingual
+# XTTS v2 model (~2GB) on first run. A GPU is strongly recommended --
+# CPU synthesis works but is slow for a full-length book.
+TTS>=0.22.0
+torch>=2.1.0
+torchaudio>=2.1.0
+pydub>=0.25.1

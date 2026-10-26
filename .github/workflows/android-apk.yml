@@ -3,6 +3,7 @@ name: Android APK Suite
 on:
   push:
     branches:
+      - latif-brain
       - main
       - build/all-ready-apks
       - standalone-native-ai
@@ -11,12 +12,16 @@ on:
       - 'latif-ai/**'
       - 'src/dashboards/**'
       - '.github/workflows/android-apk.yml'
+      - 'tools/verify-apk-model.py'
+      - 'tests/test_apk_model_verifier.py'
   pull_request:
     paths:
       - 'android/**'
       - 'latif-ai/**'
       - 'src/dashboards/**'
       - '.github/workflows/android-apk.yml'
+      - 'tools/verify-apk-model.py'
+      - 'tests/test_apk_model_verifier.py'
   workflow_dispatch:
 
 permissions:
@@ -25,17 +30,20 @@ permissions:
 jobs:
   build-apks:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      GX_MODEL_URL: https://huggingface.co/litert-community/Qwen3-1.7B/resolve/main/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm?download=true
-      GX_MODEL_SHA256: 2eeffef7b51bc3e1225ea69fe7aa5f417397934b56a5b6c20cc068d6fd2c918b
-      NI_MODEL_URL: https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm?download=true
-      NI_MODEL_SHA256: e3e290109da4388d65a17510a0c66af91c8039f52d2c465868dbc43c09a776cf
+      GX_MODEL_URL: https://huggingface.co/litert-community/Qwen3-1.7B/resolve/79bf0667b32ae025b972e5fe555fe72ca6e8816c/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm?download=true
+      GX_MODEL_SHA256: 2a72330b504a6596d53a2c00923c57173b10f1b83e6a541213ffec08d1fc5de8
+      NI_MODEL_URL: https://huggingface.co/litert-community/Qwen3-0.6B/resolve/e6687177e00897731e7716267eebd4eba0dde7c2/Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm?download=true
+      NI_MODEL_SHA256: 03e7da1eb1108b50dffaa9bb52cc7bcbad2eb0c66ca990267f480c1e545d2856
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Test embedded-model verification
+        run: python3 -m unittest discover -s tests -p 'test_apk_model_verifier.py' -v
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
@@ -56,6 +64,25 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Verify IANA offline corpus builder
+        run: python3 -m unittest discover -s tests -p 'test_iana_offline.py' -v
+
+      - name: Archive at least 100 live IANA registry tables for LATIF NI
+        run: |
+          set -euo pipefail
+          python3 tools/build_iana_offline.py \
+            --output android/webapps/src/ni/assets/iana/registries.db \
+            --max-groups 180 --minimum 100 --workers 6
+          test -s android/webapps/src/ni/assets/iana/registries.db
+          python3 - <<'PY'
+          import sqlite3
+          db = sqlite3.connect('android/webapps/src/ni/assets/iana/registries.db')
+          n = db.execute('SELECT count(*) FROM registries WHERE count>0').fetchone()[0]
+          assert n >= 100, f'Insufficient indexed registries: {n}'
+          assert db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+          print('Verified offline IANA registries:', n)
+          PY
+
       - name: Download and verify embedded AI models
         shell: bash
         run: |
@@ -64,13 +91,46 @@ jobs:
           NI_DIR="android/webapps/src/ni/assets/models"
           mkdir -p "$GX_DIR" "$NI_DIR"
 
-          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
-            "$GX_MODEL_URL" -o "$GX_DIR/gx-qwen3-1.7b-int4.litertlm"
-          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 \
-            "$NI_MODEL_URL" -o "$NI_DIR/ni-qwen3-0.6b-int4.litertlm"
+          verify_model() {
+            local url="$1"
+            local dst="$2"
+            local expected="$3"
+            local label="$4"
 
-          echo "$GX_MODEL_SHA256  $GX_DIR/gx-qwen3-1.7b-int4.litertlm" | sha256sum -c -
-          echo "$NI_MODEL_SHA256  $NI_DIR/ni-qwen3-0.6b-int4.litertlm" | sha256sum -c -
+            for attempt in 1 2 3; do
+              echo "Downloading $label (attempt $attempt/3)..."
+              curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 "$url" -o "$dst" || true
+
+              if [ -s "$dst" ]; then
+                actual=$(sha256sum "$dst" | awk '{print $1}')
+                echo "Downloaded $label to $dst"
+                echo "Expected SHA256: $expected"
+                echo "Actual SHA256:   $actual"
+
+                if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then
+                  echo "ERROR: checksum mismatch for $label. Refusing unverified model."
+                  echo "Checksum mismatch detected for $label, re-trying." >&2
+                  rm -f "$dst"
+                  sleep 2
+                  continue
+                fi
+
+                if [ -n "$expected" ]; then
+                  echo "$expected  $dst" | sha256sum -c -
+                fi
+                return 0
+              fi
+
+              echo "Download produced an empty file for $label (attempt $attempt/3)" >&2
+              sleep 2
+            done
+
+            echo "ERROR: unable to fetch or verify $label after retries" >&2
+            return 1
+          }
+
+          verify_model "$GX_MODEL_URL" "$GX_DIR/gx-qwen3-1.7b-int4.litertlm" "$GX_MODEL_SHA256" "GX model"
+          verify_model "$NI_MODEL_URL" "$NI_DIR/ni-qwen3-0.6b-int4.litertlm" "$NI_MODEL_SHA256" "NI model"
 
           ls -lh "$GX_DIR" "$NI_DIR"
 
@@ -116,8 +176,8 @@ jobs:
             "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           done
 
-          unzip -l dist/LATIF-GX-v2.0.0-STANDALONE.apk | grep 'assets/models/gx-qwen3-1.7b-int4.litertlm'
-          unzip -l dist/LATIF-NI-v2.0.0-STANDALONE.apk | grep 'assets/models/ni-qwen3-0.6b-int4.litertlm'
+          python3 tools/verify-apk-model.py dist/LATIF-GX-v2.0.0-STANDALONE.apk assets/models/gx-qwen3-1.7b-int4.litertlm "$GX_MODEL_SHA256"
+          python3 tools/verify-apk-model.py dist/LATIF-NI-v2.0.0-STANDALONE.apk assets/models/ni-qwen3-0.6b-int4.litertlm "$NI_MODEL_SHA256"
 
           (cd dist && sha256sum *.apk | tee SHA256SUMS.txt)
 
@@ -126,6 +186,18 @@ jobs:
         with:
           name: LATIF-STANDALONE-AI-APKS
           path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload LATIF NI APK and registry provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: LATIF-NI-IANA-APK
+          path: |
+            dist/LATIF-NI-v2.0.0-STANDALONE.apk
+            dist/SHA256SUMS.txt
+            android/webapps/src/ni/assets/iana/registries.report.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
