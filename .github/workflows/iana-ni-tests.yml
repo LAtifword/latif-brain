@@ -1,0 +1,38 @@
+name: LATIF NI IANA Static and Offline Tests
+on:
+  push:
+    branches:
+      - feature/iana-100-registry-android
+    paths:
+      - 'tools/build_iana_offline.py'
+      - 'tests/test_iana_offline.py'
+      - 'src/dashboards/latif-iana.js'
+      - 'src/dashboards/latif-native-ai.js'
+      - '.github/workflows/iana-ni-tests.yml'
+  pull_request:
+    paths:
+      - 'tools/build_iana_offline.py'
+      - 'tests/test_iana_offline.py'
+      - 'src/dashboards/latif-iana.js'
+      - 'src/dashboards/latif-native-ai.js'
+      - '.github/workflows/iana-ni-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Python syntax
+        run: python3 -m py_compile tools/build_iana_offline.py tests/test_iana_offline.py
+      - name: Offline builder tests
+        run: python3 -m unittest discover -s tests -p 'test_iana_offline.py' -v
+      - name: JavaScript syntax
+        run: |
+          node --check src/dashboards/latif-iana.js
+          node --check src/dashboards/latif-native-ai.js
