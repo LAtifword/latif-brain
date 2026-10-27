@@ -124,7 +124,7 @@ export class GraphPersistence {
 
     try {
       // Delete node and associated edges (cascading)
-      await db.run(`DELETE FROM kg_nodes WHERE id = ?`, [nodeId]);
+      await db.run('DELETE FROM kg_nodes WHERE id = ?', [nodeId]);
 
       logger.debug('Knowledge graph node removed', { id: nodeId });
       return true;
@@ -261,7 +261,7 @@ export class GraphPersistence {
       // Find starting node
       const [nodeType, nodeName] = parts[0].split(':').map(p => p.trim());
       const startNode = await db.get(
-        `SELECT id FROM kg_nodes WHERE type = ? AND name = ? LIMIT 1`,
+        'SELECT id FROM kg_nodes WHERE type = ? AND name = ? LIMIT 1',
         [nodeType, nodeName]
       );
 
@@ -286,13 +286,13 @@ export class GraphPersistence {
     if (!db) throw new Error('Database not initialized');
 
     try {
-      const nodeCount = await db.get(`SELECT COUNT(*) as count FROM kg_nodes`);
-      const edgeCount = await db.get(`SELECT COUNT(*) as count FROM kg_edges`);
+      const nodeCount = await db.get('SELECT COUNT(*) as count FROM kg_nodes');
+      const edgeCount = await db.get('SELECT COUNT(*) as count FROM kg_edges');
       const typeDistribution = await db.all(
-        `SELECT type, COUNT(*) as count FROM kg_nodes GROUP BY type`
+        'SELECT type, COUNT(*) as count FROM kg_nodes GROUP BY type'
       );
       const relationshipDistribution = await db.all(
-        `SELECT relation_type, COUNT(*) as count FROM kg_edges GROUP BY relation_type`
+        'SELECT relation_type, COUNT(*) as count FROM kg_edges GROUP BY relation_type'
       );
 
       return {
@@ -315,8 +315,8 @@ export class GraphPersistence {
     if (!db) throw new Error('Database not initialized');
 
     try {
-      const nodes = await db.all(`SELECT * FROM kg_nodes`);
-      const edges = await db.all(`SELECT * FROM kg_edges`);
+      const nodes = await db.all('SELECT * FROM kg_nodes');
+      const edges = await db.all('SELECT * FROM kg_edges');
 
       // Parse JSON fields
       const processedNodes = nodes.map(n => ({

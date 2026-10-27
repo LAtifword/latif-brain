@@ -2,7 +2,10 @@
  * Unit tests for Plugin Loader
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@latif/test-framework';
+ feature/build-modernization-20260814
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+
+ latif-brain
 import { PluginLoader, PluginInstance } from '../../src/plugins/plugin-loader.js';
 
 describe('PluginLoader', () => {
