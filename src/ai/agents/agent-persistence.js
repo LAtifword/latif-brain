@@ -201,7 +201,7 @@ export class AgentPersistence {
 
     try {
       const agents = await db.all(
-        `SELECT id, name, type, enabled, created_at FROM agents ORDER BY created_at DESC`
+        'SELECT id, name, type, enabled, created_at FROM agents ORDER BY created_at DESC'
       );
 
       return agents || [];

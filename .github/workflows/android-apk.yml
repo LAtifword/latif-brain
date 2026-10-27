@@ -30,7 +30,7 @@ permissions:
 jobs:
   build-apks:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -63,6 +63,25 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+
+      - name: Verify IANA offline corpus builder
+        run: python3 -m unittest discover -s tests -p 'test_iana_offline.py' -v
+
+      - name: Archive at least 100 live IANA registry tables for LATIF NI
+        run: |
+          set -euo pipefail
+          python3 tools/build_iana_offline.py \
+            --output android/webapps/src/ni/assets/iana/registries.db \
+            --max-groups 180 --minimum 100 --workers 6
+          test -s android/webapps/src/ni/assets/iana/registries.db
+          python3 - <<'PY'
+          import sqlite3
+          db = sqlite3.connect('android/webapps/src/ni/assets/iana/registries.db')
+          n = db.execute('SELECT count(*) FROM registries WHERE count>0').fetchone()[0]
+          assert n >= 100, f'Insufficient indexed registries: {n}'
+          assert db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+          print('Verified offline IANA registries:', n)
+          PY
 
       - name: Download and verify embedded AI models
         shell: bash
@@ -167,6 +186,18 @@ jobs:
         with:
           name: LATIF-STANDALONE-AI-APKS
           path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload LATIF NI APK and registry provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: LATIF-NI-IANA-APK
+          path: |
+            dist/LATIF-NI-v2.0.0-STANDALONE.apk
+            dist/SHA256SUMS.txt
+            android/webapps/src/ni/assets/iana/registries.report.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0

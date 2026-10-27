@@ -1,11 +1,82 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+name: Build
 
-version: 2
-updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
-    schedule:
-      interval: "weekly"
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Setup Node.js with caching
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_ENV: production
+
+      # Run linting (if configured)
+      - name: Run linter
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      # Run tests (if configured)
+      - name: Run tests
+        run: npm test --if-present
+        continue-on-error: true
+
+      # Build project
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      # Upload build artifacts
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.node-version }}
+          path: dist/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # Upload coverage reports (if available)
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.node-version }}
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # Build status notification
+      - name: Build status
+        if: always()
+        run: |
+          echo "Build completed with status: ${{ job.status }}"
+          echo "Node version: ${{ matrix.node-version }}"

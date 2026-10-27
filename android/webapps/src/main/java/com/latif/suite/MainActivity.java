@@ -26,6 +26,8 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> filePathCallback;
     private PermissionRequest pendingAudioPermissionRequest;
     private EmbeddedAiBridge aiBridge;
+    private IanaBridge ianaBridge;
+    private NiProjectBridge niProjectBridge;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,10 +47,24 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+.addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/generated/", new WebViewAssetLoader.InternalStoragePathHandler(this, new java.io.File(getFilesDir(), "generated-projects")))
                 .build();
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if ("https".equals(uri.getScheme()) && "appassets.androidplatform.net".equals(uri.getHost())) return false;
+                if (request.isForMainFrame()) {
+                    if ("https".equals(uri.getScheme()) && ("www.iana.org".equals(uri.getHost()) || "iana.org".equals(uri.getHost()))) {
+                        try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); } catch (Exception ignored) { }
+                    }
+                    return true;
+                }
+                return false;
+            }
+
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return assetLoader.shouldInterceptRequest(request.getUrl());
@@ -72,6 +88,9 @@ public class MainActivity extends Activity {
                         "document.head.appendChild(s);" +
                         "})();";
                 view.evaluateJavascript(bootstrap, null);
+                if ("ni".equals(BuildConfig.FLAVOR)) {
+                    view.evaluateJavascript("(function(){if(window.__LATIF_IANA_SCRIPT)return;window.__LATIF_IANA_SCRIPT=true;var x=document.createElement('script');x.src='https://appassets.androidplatform.net/assets/latif-iana.js';document.head.appendChild(x);})();", null);
+                }
             }
         });
 
@@ -120,6 +139,12 @@ public class MainActivity extends Activity {
 
         aiBridge = new EmbeddedAiBridge(this, webView);
         webView.addJavascriptInterface(aiBridge, "LATIF_AI");
+        if ("ni".equals(BuildConfig.FLAVOR)) {
+            niProjectBridge = new NiProjectBridge(this);
+            webView.addJavascriptInterface(niProjectBridge, "LATIF_PROJECTS");
+            ianaBridge = new IanaBridge(this);
+            webView.addJavascriptInterface(ianaBridge, "LATIF_IANA");
+        }
 
         if (savedInstanceState == null) {
             webView.loadUrl("https://appassets.androidplatform.net/assets/" + BuildConfig.START_PAGE);
@@ -182,12 +207,20 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (ianaBridge != null) {
+            ianaBridge.close();
+            ianaBridge = null;
+        }
         if (aiBridge != null) {
             aiBridge.close();
             aiBridge = null;
         }
         if (webView != null) {
             webView.removeJavascriptInterface("LATIF_AI");
+            if ("ni".equals(BuildConfig.FLAVOR)) {
+                webView.removeJavascriptInterface("LATIF_IANA");
+                webView.removeJavascriptInterface("LATIF_PROJECTS");
+            }
             webView.loadUrl("about:blank");
             webView.stopLoading();
             webView.destroy();

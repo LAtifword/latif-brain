@@ -22,7 +22,7 @@ class LatifAgent:
         """Initialize the agent"""
         raw_backend_url = backend_url or os.getenv("LATIF_BACKEND_URL", "http://127.0.0.1:8000")
         self.backend_url = self._validate_backend_url(raw_backend_url)
-        self.client = httpx.AsyncClient(timeout=60.0)
+        self.client = httpx.AsyncClient(base_url=self.backend_url, timeout=60.0)
         self.model = "llama2"
         self.temperature = 0.7
         self.max_tokens = 2048
@@ -42,7 +42,9 @@ class LatifAgent:
         if parsed.hostname not in allowed_hosts:
             raise ValueError("LATIF_BACKEND_URL host is not in the allowed list")
 
-        return f"{parsed.scheme}://{parsed.netloc}"
+        host = parsed.hostname
+        port = f":{parsed.port}" if parsed.port is not None else ""
+        return f"{parsed.scheme}://{host}{port}"
 
     async def send_message(
         self,
@@ -176,7 +178,7 @@ class LatifAgent:
         """Search knowledge graph"""
         try:
             response = await self.client.get(
-                f"{self.backend_url}/api/knowledge/search",
+                "/api/knowledge/search",
                 params={"query": query, "limit": limit}
             )
             return response.json()
@@ -218,7 +220,7 @@ class LatifAgent:
         """Search documents via RAG"""
         try:
             response = await self.client.post(
-                f"{self.backend_url}/api/rag/search",
+                "/api/rag/search",
                 json={"query": query, "limit": limit}
             )
             return response.json()
@@ -229,7 +231,7 @@ class LatifAgent:
     async def get_metrics(self) -> Dict[str, Any]:
         """Get system metrics"""
         try:
-            response = await self.client.get(f"{self.backend_url}/metrics")
+            response = await self.client.get("/metrics")
             return response.json()
         except Exception as e:
             logger.error(f"Error getting metrics: {e}")
@@ -238,7 +240,7 @@ class LatifAgent:
     async def health_check(self) -> Dict[str, Any]:
         """Check system health"""
         try:
-            response = await self.client.get(f"{self.backend_url}/health")
+            response = await self.client.get("/health")
             return response.json()
         except Exception as e:
             logger.error(f"Error checking health: {e}")

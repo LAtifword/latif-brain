@@ -1,0 +1,34 @@
+name: Preserve IANA Registry Snapshots
+on:
+  push:
+    branches: [latif-brain]
+    paths: ['.github/workflows/iana-snapshot.yml']
+  workflow_dispatch:
+  schedule:
+    - cron: '13 3 1 * *'
+permissions:
+  contents: write
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect extended IANA archive
+        run: |
+          set -euo pipefail
+          mkdir -p archive/iana
+          python3 tools/build_iana_offline.py --output archive/iana/registries.db --max-groups 1000 --minimum 100 --workers 5
+          (cd archive/iana && sha256sum registries.db registries.report.json > SHA256SUMS.txt)
+      - name: Publish durable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="iana-registry-snapshot-$(date -u +%Y-%m)"
+          NOTES="IANA protocol registry data from https://www.iana.org/protocols ; usage information https://www.iana.org/help/licensing-terms (CC0 subject to stated limitations). Bounded collection, not all IANA services or linked RFC documents."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" archive/iana/registries.db archive/iana/registries.report.json archive/iana/SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" archive/iana/registries.db archive/iana/registries.report.json archive/iana/SHA256SUMS.txt --title "$TAG" --notes "$NOTES" --latest=false
+          fi
